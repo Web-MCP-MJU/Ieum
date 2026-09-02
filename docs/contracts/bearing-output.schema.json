@@ -1,0 +1,405 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bearing.example/schemas/tool-outputs-v0.3.2.json",
+  "title": "Bearing v0.3.2 WebMCP tool output contracts",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "a11y.get_layout": { "$ref": "#/$defs/GetLayoutOutput" },
+    "a11y.query": { "$ref": "#/$defs/QueryOutput" },
+    "a11y.describe": { "$ref": "#/$defs/DescribeOutput" },
+    "a11y.get_route": { "$ref": "#/$defs/GetRouteOutput" },
+    "a11y.compare": { "$ref": "#/$defs/CompareOutput" },
+    "a11y.select": { "$ref": "#/$defs/SelectOutput" },
+    "a11y.get_selection": { "$ref": "#/$defs/GetSelectionOutput" },
+    "a11y.undo": { "$ref": "#/$defs/UndoOutput" },
+    "a11y.confirm": { "$ref": "#/$defs/ConfirmOutput" }
+  },
+  "$defs": {
+    "ToolError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "enum": [
+            "INVALID_REF", "NO_ROUTE", "NO_MATCH", "NOT_AVAILABLE",
+            "INVALID_SELECTION", "INVALID_CRITERIA", "UNSUPPORTED_CRITERIA",
+            "NOTHING_TO_UNDO", "CONFIRMATION_REQUIRED"
+          ]
+        },
+        "message": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "SelectionState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selected", "selectedCount", "priceTotal_usd", "undoable", "status"],
+      "properties": {
+        "selected": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "selectedCount": { "type": "integer", "minimum": 0 },
+        "priceTotal_usd": { "type": "number", "minimum": 0 },
+        "undoable": { "type": "boolean" },
+        "status": { "enum": ["draft", "confirmation_pending", "confirmed"] }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "enum": ["confirmation_pending", "confirmed"] } },
+            "required": ["status"]
+          },
+          "then": { "properties": { "undoable": { "const": false } } }
+        }
+      ]
+    },
+    "ReadFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "error"],
+      "properties": {
+        "ok": { "const": false },
+        "error": { "$ref": "#/$defs/ToolError" },
+        "hint": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "StateFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "state", "error"],
+      "properties": {
+        "ok": { "const": false },
+        "state": { "$ref": "#/$defs/SelectionState" },
+        "error": { "$ref": "#/$defs/ToolError" },
+        "hint": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "Landmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "label", "position_m", "landmarkType", "sensoryChannels", "detectability"],
+      "properties": {
+        "key": { "type": "string" },
+        "label": { "type": "string" },
+        "position_m": { "$ref": "#/$defs/Position" },
+        "landmarkType": { "enum": ["primary", "secondary", "clue", "information_point", "environmental_regularity"] },
+        "sensoryChannels": {
+          "type": "array",
+          "items": { "enum": ["tactile", "auditory", "olfactory", "thermal", "airflow", "visual"] }
+        },
+        "detectability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["caneUser", "dogGuide"],
+          "properties": {
+            "caneUser": { "enum": ["high", "medium", "low"] },
+            "dogGuide": { "enum": ["high", "medium", "low"] }
+          }
+        },
+        "signpostedAs": { "type": "string" }
+      }
+    },
+    "Position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": { "x": { "type": "number" }, "y": { "type": "number" } }
+    },
+    "UnitsNote": { "type": "string", "minLength": 1 },
+    "LayoutSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "layoutId", "bounds_m", "seatCount", "accessibleCount", "landmarks", "referencePoints", "summary"],
+      "properties": {
+        "domain": { "enum": ["rail", "hotel"] },
+        "layoutId": { "type": "string" },
+        "bounds_m": {
+          "type": "object", "additionalProperties": false, "required": ["length", "width"],
+          "properties": { "length": { "type": "number", "minimum": 0 }, "width": { "type": "number", "minimum": 0 } }
+        },
+        "seatCount": {
+          "type": "object", "additionalProperties": false, "required": ["total", "available"],
+          "properties": { "total": { "type": "integer", "minimum": 0 }, "available": { "type": "integer", "minimum": 0 } }
+        },
+        "accessibleCount": {
+          "type": "object", "additionalProperties": false,
+          "required": ["wheelchairSpaces", "transferSeats", "movableArmrestSeats"],
+          "properties": {
+            "wheelchairSpaces": { "type": "integer", "minimum": 0 },
+            "transferSeats": { "type": "integer", "minimum": 0 },
+            "movableArmrestSeats": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "landmarks": { "type": "array", "items": { "$ref": "#/$defs/Landmark" } },
+        "referencePoints": { "type": "array", "items": { "type": "string" } },
+        "summary": { "type": "string" },
+        "unitsNote": { "$ref": "#/$defs/UnitsNote" }
+      }
+    },
+    "Description": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ref", "line", "attributes", "relations", "followUps"],
+      "properties": {
+        "ref": { "type": "string" }, "line": { "type": "string" },
+        "attributes": { "type": "object" },
+        "relations": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["to", "distance_m", "rendered", "landmarksPassed"],
+            "properties": {
+              "to": { "type": "string" }, "distance_m": { "type": "number", "minimum": 0 },
+              "rendered": { "type": "string" },
+              "landmarksPassed": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "followUps": { "type": "array", "items": { "type": "string" } },
+        "unitsNote": { "$ref": "#/$defs/UnitsNote" }
+      }
+    },
+    "Distance": {
+      "type": "object", "additionalProperties": false, "required": ["from", "distance_m", "rendered"],
+      "properties": {
+        "from": { "type": "string" }, "distance_m": { "type": "number", "minimum": 0 }, "rendered": { "type": "string" }
+      }
+    },
+    "CandidateBase": {
+      "type": "object",
+      "required": ["ref", "label", "line", "price_usd", "available", "features", "domain", "accessibility"],
+      "properties": {
+        "ref": { "type": "string" }, "label": { "type": "string" }, "line": { "type": "string" },
+        "price_usd": { "type": "number", "minimum": 0 }, "available": { "type": "boolean" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "distance": { "$ref": "#/$defs/Distance" }
+      }
+    },
+    "RailCandidate": {
+      "allOf": [
+        { "$ref": "#/$defs/CandidateBase" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["ref", "label", "line", "price_usd", "available", "features", "domain", "rail", "accessibility"],
+          "properties": {
+            "ref": true, "label": true, "line": true, "price_usd": true, "available": true, "features": true, "distance": true,
+            "domain": { "const": "rail" },
+            "rail": {
+              "type": "object", "additionalProperties": false, "required": ["row", "seatLetter", "side", "facing"],
+              "properties": {
+                "row": { "type": "integer" }, "seatLetter": { "type": "string" },
+                "side": { "enum": ["window", "aisle"] }, "facing": { "enum": ["forward", "backward"] }
+              }
+            },
+            "accessibility": {
+              "type": "object", "additionalProperties": false,
+              "required": ["wheelchairSpace", "transferSeat", "companionSeat", "movableArmrest", "footSpace_in2", "bulkhead", "exitRow"],
+              "properties": {
+                "wheelchairSpace": { "type": "boolean" }, "transferSeat": { "type": "boolean" },
+                "companionSeat": { "type": "boolean" }, "movableArmrest": { "type": "boolean" },
+                "footSpace_in2": { "type": "number", "minimum": 0 }, "bulkhead": { "type": "boolean" }, "exitRow": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "HotelCandidate": {
+      "allOf": [
+        { "$ref": "#/$defs/CandidateBase" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["ref", "label", "line", "price_usd", "available", "features", "domain", "hotel", "accessibility"],
+          "properties": {
+            "ref": true, "label": true, "line": true, "price_usd": true, "available": true, "features": true, "distance": true,
+            "domain": { "const": "hotel" },
+            "hotel": {
+              "type": "object", "additionalProperties": false, "required": ["floor"],
+              "properties": { "floor": { "type": "integer" }, "bedToBathroom_m": { "type": "number", "minimum": 0 } }
+            },
+            "accessibility": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean", "null"] } }
+          }
+        }
+      ]
+    },
+    "Candidate": { "oneOf": [{ "$ref": "#/$defs/RailCandidate" }, { "$ref": "#/$defs/HotelCandidate" }] },
+    "QueryCriteria": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["availableOnly"],
+      "properties": {
+        "near": { "type": "string" },
+        "maxDistance_m": { "type": "number", "minimum": 0 },
+        "priceMax_usd": { "type": "number", "minimum": 0 },
+        "availableOnly": { "type": "boolean" },
+        "needs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "wheelchairSpace": { "type": "boolean" },
+            "transferSeat": { "type": "boolean" },
+            "movableArmrest": { "type": "boolean" },
+            "minFootSpace_in2": { "type": "number", "minimum": 0 },
+            "excludeExitRow": { "type": "boolean" }
+          }
+        },
+        "rail": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "facing": { "enum": ["forward", "backward"] },
+            "side": { "enum": ["window", "aisle"] },
+            "quietCar": { "type": "boolean" }
+          }
+        },
+        "hotel": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "floorMin": { "type": "number", "minimum": 0 },
+            "floorMax": { "type": "number", "minimum": 0 },
+            "bedToBathroomMax_m": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "QueryData": {
+      "type": "object", "additionalProperties": false,
+      "required": ["items", "appliedCriteria", "totalMatched"],
+      "properties": {
+        "items": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/Candidate" } },
+        "appliedCriteria": { "$ref": "#/$defs/QueryCriteria" },
+        "totalMatched": { "type": "integer", "minimum": 0 },
+        "unitsNote": { "$ref": "#/$defs/UnitsNote" }
+      }
+    },
+    "Comparison": {
+      "type": "object", "additionalProperties": false, "required": ["axes", "rows"],
+      "properties": {
+        "axes": {
+          "type": "array", "items": {
+            "type": "object", "additionalProperties": false, "required": ["key", "label"],
+            "properties": { "key": { "type": "string" }, "label": { "type": "string" } }
+          }
+        },
+        "rows": {
+          "type": "array", "minItems": 2, "maxItems": 4,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["ref", "values"],
+            "properties": {
+              "ref": { "type": "string" },
+              "values": {
+                "type": "object",
+                "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+              }
+            }
+          }
+        },
+        "unitsNote": { "$ref": "#/$defs/UnitsNote" }
+      }
+    },
+    "RouteSegment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pathway_mode", "from", "to", "length_m", "traversal_time_s", "bearing", "landmarksPassed"],
+      "properties": {
+        "pathway_mode": { "enum": ["walkway", "stairs", "elevator", "door", "vestibule"] },
+        "from": { "type": "string" }, "to": { "type": "string" },
+        "length_m": { "type": "number", "minimum": 0 }, "traversal_time_s": { "type": "number", "minimum": 0 },
+        "stair_count": { "type": "integer" }, "min_width_m": { "type": "number", "minimum": 0 },
+        "max_slope": { "type": "number" }, "signpostedAs": { "type": "string" },
+        "bearing": {
+          "type": "object", "additionalProperties": false, "required": ["frame", "degrees"],
+          "properties": {
+            "frame": { "enum": ["egocentric", "car_axis"] },
+            "degrees": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 }
+          }
+        },
+        "countedFeatures": {
+          "type": "object", "additionalProperties": false, "required": ["feature", "count"],
+          "properties": { "feature": { "type": "string" }, "count": { "type": "integer", "minimum": 0 } }
+        },
+        "landmarksPassed": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Route": {
+      "type": "object", "additionalProperties": false,
+      "required": ["from", "requestedTo", "to", "totalLength_m", "totalTraversalTime_s", "segments", "landmarks", "requiresContinuation", "rendered"],
+      "properties": {
+        "from": { "type": "string" }, "requestedTo": { "type": "string" }, "to": { "type": "string" },
+        "totalLength_m": { "type": "number", "minimum": 0 }, "totalTraversalTime_s": { "type": "number", "minimum": 0 },
+        "segments": { "type": "array", "maxItems": 4, "items": { "$ref": "#/$defs/RouteSegment" } },
+        "landmarks": { "type": "array", "items": { "$ref": "#/$defs/Landmark" } },
+        "requiresContinuation": { "type": "boolean" },
+        "checkpoint": {
+          "type": "object", "additionalProperties": false, "required": ["ref", "label"],
+          "properties": { "ref": { "type": "string" }, "label": { "type": "string" } }
+        },
+        "rendered": {
+          "type": "object", "additionalProperties": false,
+          "required": ["units", "directionStyle", "instructions", "summary"],
+          "properties": {
+            "units": { "enum": ["meters", "feet", "steps"] },
+            "directionStyle": { "enum": ["relative", "clock", "cardinal"] },
+            "instructions": { "type": "array", "items": { "type": "string" } },
+            "summary": { "type": "string" }, "unitsNote": { "$ref": "#/$defs/UnitsNote" }
+          }
+        }
+      }
+    },
+    "ReadSuccessBase": {
+      "type": "object", "additionalProperties": false, "required": ["ok", "data"],
+      "properties": { "ok": { "const": true }, "data": true }
+    },
+    "StateSuccessBase": {
+      "type": "object", "additionalProperties": false, "required": ["ok", "data", "state"],
+      "properties": { "ok": { "const": true }, "data": true, "state": { "$ref": "#/$defs/SelectionState" } }
+    },
+    "GetLayoutOutput": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["ok", "data"], "properties": { "ok": { "const": true }, "data": { "$ref": "#/$defs/LayoutSummary" } } }, { "$ref": "#/$defs/ReadFailure" }] },
+    "QueryOutput": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["ok", "data"], "properties": { "ok": { "const": true }, "data": { "$ref": "#/$defs/QueryData" }, "hint": { "type": "string", "maxLength": 300 } } }, { "$ref": "#/$defs/ReadFailure" }] },
+    "DescribeOutput": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["ok", "data"], "properties": { "ok": { "const": true }, "data": { "$ref": "#/$defs/Description" } } }, { "$ref": "#/$defs/ReadFailure" }] },
+    "GetRouteOutput": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["ok", "data"], "properties": { "ok": { "const": true }, "data": { "$ref": "#/$defs/Route" } } }, { "$ref": "#/$defs/ReadFailure" }] },
+    "CompareOutput": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["ok", "data"], "properties": { "ok": { "const": true }, "data": { "$ref": "#/$defs/Comparison" } } }, { "$ref": "#/$defs/ReadFailure" }] },
+    "SelectData": { "type": "object", "additionalProperties": false, "required": ["selectedRef"], "properties": { "selectedRef": { "type": "string" } } },
+    "SelectionData": { "type": "object", "additionalProperties": false, "required": ["selected"], "properties": { "selected": { "type": "array", "uniqueItems": true, "items": { "type": "string" } } } },
+    "UndoData": { "type": "object", "additionalProperties": false, "required": ["undone"], "properties": { "undone": { "type": ["string", "null"] } } },
+    "ConfirmData": { "type": "object", "additionalProperties": false, "required": ["outcome"], "properties": { "outcome": { "enum": ["confirmed", "cancelled", "timeout"] } } },
+    "SelectOutput": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["ok", "data", "state"], "properties": { "ok": { "const": true }, "data": { "$ref": "#/$defs/SelectData" }, "state": { "$ref": "#/$defs/SelectionState" } } }, { "$ref": "#/$defs/StateFailure" }] },
+    "GetSelectionOutput": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["ok", "data", "state"], "properties": { "ok": { "const": true }, "data": { "$ref": "#/$defs/SelectionData" }, "state": { "$ref": "#/$defs/SelectionState" } } }, { "$ref": "#/$defs/ReadFailure" }] },
+    "UndoOutput": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["ok", "data", "state"], "properties": { "ok": { "const": true }, "data": { "$ref": "#/$defs/UndoData" }, "state": { "$ref": "#/$defs/SelectionState" } } }, { "$ref": "#/$defs/StateFailure" }] },
+    "ConfirmOutput": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["ok", "data", "state"],
+          "properties": {
+            "ok": { "const": true },
+            "data": {
+              "type": "object", "additionalProperties": false, "required": ["outcome"],
+              "properties": { "outcome": { "const": "confirmed" } }
+            },
+            "state": {
+              "allOf": [
+                { "$ref": "#/$defs/SelectionState" },
+                { "properties": { "status": { "const": "confirmed" }, "undoable": { "const": false } } }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["ok", "data", "state"],
+          "properties": {
+            "ok": { "const": true },
+            "data": {
+              "type": "object", "additionalProperties": false, "required": ["outcome"],
+              "properties": { "outcome": { "enum": ["cancelled", "timeout"] } }
+            },
+            "state": {
+              "allOf": [
+                { "$ref": "#/$defs/SelectionState" },
+                { "properties": { "status": { "const": "draft" } } }
+              ]
+            }
+          }
+        },
+        { "$ref": "#/$defs/StateFailure" }
+      ]
+    }
+  }
+}

@@ -1,1352 +1,666 @@
-# Wayfinder Architecture Draft v0.3.1 — Spatial Accessibility Bridge
+# Bearing Architecture v0.3.2 — Spatial Accessibility Bridge
 
-**선행 문서:** PRD v0.2.1 (2026-09-01) · Architecture Draft v0.2.1  
-**문서 성격:** Verified Bridge Architecture Revision  
-**이 문서의 역할:** Wayfinder를 단순 WebMCP 어댑터가 아니라 **시각적으로만 존재하던 공간 정보를 Agent가 질의 가능한 의미 구조로 변환하는 Spatial Accessibility Bridge**로 정의하고, 그 역할을 구현 가능한 레이어·계약·테스트로 고정한다.
+**Product contract:** `docs/PRD v0.3.md`
 
----
+**Specification date:** 2026-09-02
 
-## 0. v0.3.0 → v0.3.1 재검증 요약
+**Document role:** implementation-ready architecture and acceptance contract; it does not claim that implementation, runtime integration, accessibility validation, deployment, or submission is complete.
 
-v0.3.0의 중심 결정 — **외부 Agent가 자연어를 해석하고, Wayfinder는 deterministic spatial truth를 `a11y.*` 계약으로 노출한다** — 은 유지한다.
+This revision replaces the v0.3.1 public contract. Bearing is the selected project name; the only implemented MVP domain is `rail`; the independently authored fixture is `data/intercity-car-6.json`, its unbranded `layoutId` is `Car 6, Business Class`, and all prices are USD. The former numbered revision summary is retained here as an unnumbered preamble so the architecture has exactly §§1–27.
 
-재검증에서는 2026-08-26 WebMCP Community Draft 및 2026-08-20 Chrome Imperative API 문서와 다시 대조하고, Bridge가 실제로 “semantic bridge” 역할을 하는지 코드 경계까지 점검했다.
+Authority, in descending order:
 
-| 영역 | v0.3.0 | v0.3.1 |
-| --- | --- | --- |
-| WebMCP execute 취소 | Community Draft와 Chrome의 `{ signal }` 차이를 compatibility point로 둠 | **최신 Community Draft도 `ToolExecuteCallbackOptions.signal`을 명시.** `execute(input, { signal })`을 기준으로 사용하고, 구현체 지연만 Adapter에서 방어 (§13.2, §15.1) |
-| 공간 정보의 원천 | “시각 정보를 의미 구조로 변환”이라는 표현이 추출/OCR처럼 읽힐 수 있음 | **하나의 structured spatial model이 UI와 Bridge를 동시에 구동**하는 Single Source of Spatial Truth로 명확화 (§1, §3) |
-| Query candidate | Domain이 `{ ref, line }` 생성 | Domain은 **구조화 fact**를 반환하고, Bridge가 Agent용 `line`을 만든다 (§5.2, §9) |
-| 적용 조건 | `appliedCriteria`가 입력값과 동일할 수 있음 | 기본값까지 포함한 **normalized applied criteria**를 반환 (§6) |
-| Compare | `axes[]` + 인덱스 기반 `values[]` | axis key를 가진 **keyed comparison values**로 변경 (§5.2) |
-| Route 동일 행 | 모든 off-aisle 지점을 aisle로 우회 | **같은 row는 직접 횡이동**, 다른 row만 aisle 경유. `4-12A → 4-12B` 과대 계산 방지 (§7.2) |
-| Tool 결과 | `ToolResult<T>` 직접 반환 | 유지하되 **JSON-serializable plain value**만 허용. 현재 WebMCP에 `outputSchema`가 없으므로 출력 계약은 TS + contract test로 보증 (§11, §15.2) |
-| Confirmation primitive | 플랫폼별 primitive 가능성만 언급 | **현재 2026-08-26 Draft에는 `requestUserInteraction()`이 없음.** 인페이지 접근 가능한 dialog를 baseline으로 하고 플랫폼 전용 API는 feature-detect 시에만 사용 (§13) |
-| Capability | secure context / API 존재 / registration 실패 | `SecurityError`, `NotAllowedError`를 구분해 **환경/권한 실패를 더 정확히 진단** (§15.4) |
-| Bridge 구현량 | handler 9개 파일을 전제로 보일 수 있음 | Bridge는 논리적 경계이며 MVP에서는 작은 파일로 합쳐도 됨. **레이어 ≠ 마이크로서비스/과도한 파일 분할** (§9, §22) |
+1. [Official challenge page](https://webmcp.devpost.com/) and [official rules](https://webmcp.devpost.com/rules) for eligibility, judging, submission, language, provenance, and IP.
+2. [Current WebMCP Draft Community Group Report](https://webmachinelearning.github.io/webmcp/) for WebMCP API facts. It is a Draft Community Group Report, not a W3C Standard or W3C Standards Track document.
+3. [GTFS Schedule Reference](https://gtfs.org/documentation/schedule/reference/) for GTFS Pathways wire names and semantics.
+4. `docs/PRD v0.3.md` for Bearing product intent, scope, user journey, types, and UI.
+5. The earlier Architecture only for non-conflicting implementation detail.
+
+[Chrome WebMCP documentation](https://developer.chrome.com/docs/ai/webmcp/imperative-api) and [OpenAI Site Tools documentation](https://help.openai.com/en/articles/20001423-using-site-tools-in-the-chatgpt-desktop-app) are target-runtime guidance, subordinate to the draft. Host guidance such as a recommended 1.5K-character individual-output ceiling is optimization guidance, not a normative API limit and not permission to omit required fields.
+
+Explicit higher-authority corrections in this revision are labeled **Official/spec erratum**. Schedule estimates, deadline triage, cut lists, registration timing, and deployment sequencing are intentionally non-architectural; product and evidence obligations remain normative.
 
 ---
 
-## 1. 한 문장 아키텍처 정의
+## 1. One-sentence architecture definition
 
-> **Wayfinder는 좌석 배치 UI와 동일한 structured spatial model에서 공간 구조·관계·이동 경로·선택 상태를 계산하고, 이를 안정적인 `a11y.*` Tool Contract로 투영하여 외부 Browser Agent가 시각장애 사용자에게 탐색·비교·판단 정보를 전달할 수 있게 하는 Spatial Accessibility Bridge다.**
+> **Bearing projects one authored, structured spatial model through deterministic Application use cases into both an accessible human UI and nine stable `a11y.*` WebMCP contracts, so a person can interrogate layout, route, comparison, selection, and confirmation facts without relying on visual inference.**
 
-Wayfinder는 AI 좌석 추천 Agent가 아니다.
+Bearing is a Spatial Accessibility Bridge, not an AI recommendation agent. It contains no LLM, natural-language parser, autonomous planner, generic recommendation tool, DOM scraper, OCR, or visual inference. The external Browser Agent owns natural-language understanding, tool orchestration, and conversational-reference resolution; Bearing owns deterministic spatial facts, state transitions, accessible human controls, and contract projection.
 
-Wayfinder 내부에는 자연어를 해석하는 LLM이나 autonomous planner를 두지 않는다.
+“Visual to semantic” means that UI and tools are projections of the same authored data. It never means reconstructing geometry from pixels or the DOM.
 
-```text
-사용자 자연어
-    ↓
-External Browser Agent
-    ↓ structured tool call
-Wayfinder Spatial Accessibility Bridge
-    ↓ deterministic use case
-Structured Spatial Model / Domain Core
-```
+Identity claims are bounded: Bearing is the selected project name and, among the major standards reviewed in PRD §4, addresses a gap in interrogable pre-selection spatial information. No exhaustive naming, trademark, standards, safety, or accessibility-certification claim is made.
 
-자연어 이해와 다단계 tool orchestration은 Browser Agent가 담당한다.  
-Wayfinder는 **UI가 보여주는 것과 Tool이 말하는 것이 같은 공간 사실에서 나오도록 보장하고**, 그 사실을 Agent가 소비하기 쉬운 접근성 계약으로 노출하는 것을 책임진다.
+## 2. Why the Bridge boundary is sufficient
 
-중요한 범위 경계:
+The retained modular-monolith boundaries are sufficient when “Bridge” means the combined semantic contract, not merely a browser API adapter:
 
 ```text
-❌ 화면 픽셀/DOM을 읽어서 공간을 추론
-✅ 앱이 이미 가진 structured spatial data로 화면과 Tool을 함께 생성
-```
-
-즉 “visual → semantic”은 런타임 OCR/스크래핑 변환이 아니라, **동일한 공간 모델의 Human-facing projection과 Agent-facing projection을 제공한다는 의미**다.
-
----
-
-## 2. 현재 구조가 Bridge 역할에 충분한가?
-
-### 결론
-
-**기존 v0.2.1의 Domain Core + Application + WebMCP Adapter 구조는 기반으로 충분하다.**
-
-다만 WebMCP Adapter 하나를 “Bridge”라고 부르면 역할이 너무 좁다.
-
-WebMCP Adapter는 브라우저 API binding일 뿐이며, 실제 접근성 Bridge는 다음 세 부분이 함께 만든다.
-
-```text
-Spatial Domain Core
-        ↓ 공간 사실 계산
-Application
-        ↓ use case / state transition
-Spatial Accessibility Bridge Contract
-        ↓ Agent가 이해할 수 있는 의미 계약
-WebMCP Adapter
-        ↓ 브라우저 Agent에 노출
-External Agent
-```
-
-따라서 v0.3.1에서는 **Bridge Contract를 독립 경계로 명시**한다.
-
-### Bridge가 해결해야 하는 사용자 불편과 Tool 매핑
-
-| 사용자 불편 | 기존 화면에서 잃는 정보 | Bridge가 제공하는 기능 |
-| --- | --- | --- |
-| 전체 구조를 파악하기 어렵다 | 출입문/화장실/통로/좌석의 관계 | `a11y.get_layout` |
-| 특정 좌석이 어디 있는지 감이 없다 | 주변 기준점과 상대 위치 | `a11y.describe` |
-| 조건에 맞는 좌석을 탐색하기 어렵다 | 시각적 필터 결과와 공간 관계 | `a11y.query` |
-| 실제 이동 난이도를 알기 어렵다 | 출입문→좌석, 좌석→화장실 동선 | `a11y.get_route` |
-| 후보 간 장단점을 비교하기 어렵다 | 거리·방향·위치 차이 | `a11y.compare` |
-| 현재 무엇을 골랐는지 놓치기 쉽다 | 화면의 선택 상태 | `a11y.select`, `a11y.get_selection` |
-| 실수를 되돌리기 어렵다 | 화면 상태 변화 | `a11y.undo` |
-| Agent가 임의로 확정하면 안 된다 | 최종 의사결정 통제권 | `a11y.confirm` + human confirmation |
-
-이 9개 기능이 정상적으로 동작하면 **별도의 내부 AI Agent 없이도 Wayfinder의 핵심 접근성 문제를 해결할 수 있다.**
-
----
-
-## 3. 전체 아키텍처
-
-Wayfinder는 **브라우저 로컬 Modular Monolith**로 구성한다.
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                        Screen Reader User                    │
-│                                                              │
-│        자연어 대화                          키보드/ARIA      │
-└──────────────┬──────────────────────────────────┬────────────┘
-               │                                  │
-               ▼                                  ▼
-┌──────────────────────────┐          ┌─────────────────────────┐
-│ External Browser Agent   │          │       React UI          │
-│ ChatGPT / Agent Client   │          │ Seat Map / Status UI    │
-│                          │          │ Route Overlay / Dialog   │
-│ 자연어 이해              │          └────────────┬────────────┘
-│ tool 선택/조합            │                       │
-│ 대화형 ref 해소           │                       │
-└─────────────┬────────────┘                       │
-              │ WebMCP                             │
-              ▼                                    │
-┌──────────────────────────┐                       │
-│      WebMCP Adapter      │                       │
-│ registerTool / lifecycle │                       │
-│ capability / compat      │                       │
-└─────────────┬────────────┘                       │
-              ▼                                    │
-┌─────────────────────────────────────┐            │
-│ Spatial Accessibility Bridge       │            │
-│                                     │            │
-│ a11y.* public contract              │            │
-│ schema validation                   │            │
-│ response shaping (3~5 items)        │            │
-│ applied criteria / stable refs      │            │
-│ state projection / error mapping    │            │
-│ action safety                       │            │
-└─────────────┬───────────────────────┘            │
-              │                                    │
-              └──────────────┬─────────────────────┘
-                             ▼
-                 ┌───────────────────────┐
-                 │   Application Layer   │
-                 │ use cases / state     │
-                 │ confirmation coord.   │
-                 └───────────┬───────────┘
-                             │
-                 ┌───────────┴────────────┐
-                 ▼                        ▼
-       ┌──────────────────────┐  ┌──────────────────────┐
-       │     Domain Core      │  │      App Store       │
-       │ Spatial Layout       │  │ selection            │
-       │ Route Engine         │  │ confirmation status  │
-       │ Query Engine         │  │ active route         │
-       │ Comparison Engine    │  │ highlight / history  │
-       └──────────┬───────────┘  └──────────────────────┘
-                  │
-            ┌─────┴─────┐
-            ▼           ▼
-      ┌───────────┐ ┌───────────┐
-      │ Train Data│ │ Hotel Data│
-      │ Adapter   │ │ Adapter   │
-      └───────────┘ └───────────┘
-```
-
-핵심 의존성:
-
-```text
-External Agent
-     ↓
-WebMCP Adapter
-     ↓
-Spatial Accessibility Bridge
-     ↓
-Application
-     ↓
+Structured spatial source
+        ↓
 Domain Core
+        ↓
+Application use cases ↔ App Store
+        ↓
+Spatial Accessibility Bridge
+        ↓
+WebMCP Adapter
+        ↓
+External Browser Agent
 ```
 
-Human UI는 Bridge를 우회하고 Application을 직접 사용한다.
+The product goals map to concrete boundaries:
+
+| PRD goal | Architectural realization |
+| --- | --- |
+| G1: expose 2D seat/room information as interrogable tools | Nine domain-independent contracts in §10 |
+| G2: treat routes as first-class data | Meter-source `RouteSegment[]` and `Route` in §7 |
+| G3: support interrogation, not summary-only output | Stable refs, structured facts, relations, and `followUps`; summaries remain derived conveniences |
+| G4: ground vocabulary in O&M literature | Five-category `Landmark` and sensory/detectability facts in §5 |
+| G5: make `a11y.*` reusable | Rail implementation plus hotel/standards/legal portability proof in §18 |
+
+The bridge covers the complete journey:
 
 ```text
-React UI → Application → Domain / Store
+get_layout → query → describe and/or get_route → compare
+           → select → get_selection and/or undo → confirm
 ```
 
-따라서 WebMCP가 없어도 기본 접근 가능한 UI는 동작하고, WebMCP가 있으면 **동일한 공간 의미와 상태를 Agent가 사용할 수 있다.**
+Tool count alone is not the product value. The value is a coherent, inspectable journey in which UI and Agent observe the same spatial and decision state and only the human can complete confirmation.
 
+## 3. Overall architecture
 
-### 3.1 Single Source of Spatial Truth
-
-UI와 Bridge가 서로 다른 좌석 데이터를 만들지 않는다.
+Bearing is a browser-local modular monolith.
 
 ```text
-                 Structured Spatial Model
-                       /          \
-                      /            \
-             Human UI projection   Domain/Application
-                                         ↓
-                                Bridge projection
-                                         ↓
-                                      Agent
+External Browser Agent
+        ↓
+WebMCP Adapter
+        ↓
+Spatial Accessibility Bridge
+        ↓
+Application
+        ↓
+Domain Core ↔ App Store
+        ↑
+Accessible Human UI
 ```
 
-- Train fixture / Hotel fixture가 공간 사실의 원천이다.
-- SeatMap은 그 모델을 시각적으로 렌더링한다.
-- Route/Query/Compare는 같은 모델을 계산한다.
-- Bridge는 계산 결과를 Agent-facing DTO로 투영한다.
+Dependency rules:
 
-따라서 “화면에서는 8걸음인데 Agent는 6걸음” 같은 이중 진실을 만들지 않는다.
+- `Domain Core` is pure TypeScript and has no DOM, UI framework, Agent, or WebMCP dependency.
+- `Application` calls Domain Core and the App Store. It has no DOM or WebMCP dependency.
+- `Spatial Accessibility Bridge` validates public inputs, invokes Application, and projects public results/errors.
+- `WebMCP Adapter` owns only capability detection, registration, execution binding, serialization constraints, and lifecycle.
+- `Accessible Human UI` calls the same Application use cases as the Bridge; UI and tools never call each other.
+- `App Store` is the single source of mutable browser-local state.
+- The authored fixture is the single source of spatial truth. UI overlays, prose rendering, tests, and tool results derive from Domain output.
 
----
+WebMCP is progressive enhancement. When unavailable, every human task remains possible through keyboard- and screen-reader-operable controls (§17). There is no account, login, payment, real reservation, server, or database.
 
-## 4. Agent와 Bridge의 책임 경계
+## 4. Agent and Bridge responsibility boundary
 
-### 4.1 External Agent가 담당하는 것
+### 4.1 External Browser Agent
 
-- 사용자 자연어 이해
-- 어떤 `a11y.*` Tool을 호출할지 결정
-- 필요한 경우 여러 Tool을 순차 호출
-- `"두 번째 거"`, `"그거"`, `"아까 선택한 자리"` 같은 대화형 참조 해소
-- Tool 결과를 사용자의 언어로 설명
-- 사용자의 추가 질문을 받아 탐색을 계속 진행
+- Understand natural-language intent and choose/sequence the nine tools.
+- Resolve phrases such as “the second one” against stable refs and prior ordered results.
+- Explain structured results in the user’s requested language or level of detail.
+- Ask follow-up questions and preserve user agency.
+- Never invent a spatial fact, silently relax a criterion, or claim confirmation without the tool result.
 
-### 4.2 Wayfinder Bridge가 담당하는 것
+### 4.2 Bearing
 
-- 실제 공간 구조와 위치 관계를 정확하게 계산
-- stable `ref`를 제공
-- query 조건을 검증하고 실제 적용 조건을 명시
-- 이동 경로를 구조화해 제공
-- 결과를 음성 대역폭에 맞게 제한
-- 현재 선택과 confirmation 상태를 정확하게 투영
-- 화면 UI와 Agent가 동일한 상태를 관찰하도록 보장
-- Agent 단독 확정을 차단
-- 예상 가능한 오류를 구조화된 코드로 반환
+- Resolve stable refs against the loaded layout.
+- Validate and normalize criteria and render options.
+- Calculate deterministic search, comparison, relations, route geometry, and derived rendering.
+- Preserve authored meters and bearing/reference-frame values.
+- Expose structured facts plus derived `line`, `rendered`, and `followUps` conveniences.
+- Keep UI highlights, overlays, log, selection, totals, undo, and confirmation coherent.
+- Reject expected domain failures with the exact §19 vocabulary.
+- Prevent Agent-only confirmation.
 
-### 4.3 Wayfinder Bridge가 하지 않는 것
+### 4.3 Explicit exclusions
 
-- 자연어 intent parsing
-- LLM 기반 좌석 추천
-- `"가장 좋은 자리"`를 자체 판단
-- 사용자를 대신한 autonomous tool planning
-- DOM scraping으로 좌석 위치 추측
-- 화면 이미지에 대한 vision inference
-- Browser Agent를 대체하는 자체 채팅 Agent
+Bearing does not implement actual booking/payment; accounts, login, or multiple users; scraping or a browser extension; an internal LLM; generic pathfinding or geometry; multilevel or multi-car routing; full locale separation; actual hotel UI/adapter/routing; real operator data; a copied real-world layout; authored step counts; or autonomous confirmation. Accessibility attributes can describe compound needs, but the product claim stays scoped to nonvisual spatial decision support.
 
-특히 다음 형태는 MVP에서 만들지 않는다.
+## 5. Domain Core and complete data contracts
 
-```text
-a11y.ask({
-  request: "좋은 자리 알아서 골라줘"
-})
-```
-
-이런 generic Agent Tool은 Wayfinder의 접근성 계약을 다시 불투명한 AI 판단으로 감싸므로 제외한다.
-
----
-
-## 5. 핵심 Layer — Domain Core
-
-React, DOM, WebMCP, Agent를 전혀 모르는 순수 TypeScript 모듈이다.
-
-```text
-domain/
- ├─ spatial/
- │   ├─ types.ts
- │   ├─ calibration.ts
- │   ├─ route-engine.ts
- │   ├─ query-engine.ts
- │   └─ comparison-engine.ts
- ├─ train/
- │   ├─ train-domain.ts
- │   └─ train-types.ts
- └─ hotel/
-     ├─ hotel-domain.ts
-     └─ hotel-types.ts
-```
-
-### 5.1 `SpatialDomain`
+The Domain Core consumes validated authored data and produces facts. It never formats Agent protocol envelopes or manipulates UI.
 
 ```ts
-type SpatialRef = string;
-type Point = { row: number; col: number };
-
-interface SpatialDomain {
-  getLayout(): LayoutSummary;
-  query(criteria: QueryCriteria): QueryOutcome;
-  describe(ref: SpatialRef): Description;
-  route(from: SpatialRef, to: SpatialRef): Route;
-  compare(refs: SpatialRef[]): Comparison;
-}
+type Seat = {
+  ref: string;
+  row: number;
+  seatLetter: string;
+  position_m: { x: number; y: number };
+  side: "window" | "aisle";
+  facing: "forward" | "backward";
+  price_usd: number;
+  available: boolean;
+  wheelchairSpace: boolean;
+  transferSeat: boolean;
+  companionSeat: boolean;
+  movableArmrest: boolean;
+  footSpace_in2: number;
+  bulkhead: boolean;
+  exitRow: boolean;
+  features: string[];
+};
 ```
 
-기차와 호텔이 같은 내부 모델을 완벽하게 공유할 필요는 없다.
-
-**같아야 하는 것은 Agent에게 보이는 contract와 의미다.**
-
-### 5.2 Query Domain Result — 구조화 fact 우선
-
-Domain은 Agent용 문장을 만들지 않고 공간 fact를 반환한다.
+`Seat` exposes individual decision facts rather than an opaque `accessible` boolean. Wheelchair, transfer, companion, armrest, service-animal foot-space, bulkhead, and exit-row facts remain separately interrogable.
 
 ```ts
-type DomainCandidate = {
-  ref: SpatialRef;
+type LandmarkType =
+  | "primary"
+  | "secondary"
+  | "clue"
+  | "information_point"
+  | "environmental_regularity";
+
+type SensoryChannel =
+  | "tactile"
+  | "auditory"
+  | "olfactory"
+  | "thermal"
+  | "airflow"
+  | "visual";
+
+type Landmark = {
+  key: string;
   label: string;
-  price: number;
+  position_m: { x: number; y: number };
+  landmarkType: LandmarkType;
+  sensoryChannels: SensoryChannel[];
+  detectability: {
+    caneUser: "high" | "medium" | "low";
+    dogGuide: "high" | "medium" | "low";
+  };
+  signpostedAs?: string;
+};
+```
+
+The five O&M categories are not collapsed to strings. A concise landmark phrase is derived from these facts and never replaces category, sensory channel, detectability, sign text, stable key, or position.
+
+```ts
+type LayoutSummary = {
+  domain: "rail" | "hotel";
+  layoutId: string;
+  bounds_m: { length: number; width: number };
+  seatCount: { total: number; available: number };
+  accessibleCount: {
+    wheelchairSpaces: number;
+    transferSeats: number;
+    movableArmrestSeats: number;
+  };
+  landmarks: Landmark[];
+  referencePoints: string[];
+  summary: string;
+  unitsNote?: string;
+};
+
+type Description = {
+  ref: string;
+  line: string;
+  attributes: Record<string, unknown>;
+  relations: {
+    to: string;
+    distance_m: number;
+    rendered: string;
+    landmarksPassed: string[];
+  }[];
+  followUps: string[];
+  unitsNote?: string;
+};
+```
+
+`LayoutSummary.summary` and `Description.line` are derived conveniences. Stable refs, typed landmarks, attributes, structured relations, and follow-up prompts are the interrogable contract.
+
+Query and compare use one discriminated result model across the rail implementation and hotel documentation proof:
+
+```ts
+type CandidateBase = {
+  ref: string;
+  label: string;
+  line: string;
+  price_usd: number;
   available: boolean;
   features: string[];
-
-  // near 조건이 적용된 경우
-  distance?: {
-    from: SpatialRef;
-    steps: number;
-  };
-
-  train?: {
-    direction: "forward" | "backward";
-    side: "window" | "aisle";
-  };
-
-  hotel?: {
-    floor: number;
-    bedToBathroomSteps?: number;
-  };
+  distance?: { from: string; distance_m: number; rendered: string };
 };
 
-type AppliedQueryCriteria = {
-  near?: SpatialRef;
-  maxSteps?: number;
-  priceMax?: number;
-  availableOnly: boolean; // 기본값까지 normalize하여 항상 명시
-  train?: QueryCriteria["train"];
-  hotel?: QueryCriteria["hotel"];
-};
-
-type QueryOutcome =
+type Candidate = CandidateBase & (
   | {
-      ok: true;
-      items: DomainCandidate[];
-      total: number;
-      appliedCriteria: AppliedQueryCriteria;
+      domain: "rail";
+      rail: {
+        row: number;
+        seatLetter: string;
+        side: "window" | "aisle";
+        facing: "forward" | "backward";
+      };
+      hotel?: never;
+      accessibility: {
+        wheelchairSpace: boolean;
+        transferSeat: boolean;
+        companionSeat: boolean;
+        movableArmrest: boolean;
+        footSpace_in2: number;
+        bulkhead: boolean;
+        exitRow: boolean;
+      };
     }
   | {
-      ok: false;
-      code:
-        | "UNSUPPORTED_CRITERIA"
-        | "INVALID_CRITERIA"
-        | "NO_MATCH";
-    };
-```
+      domain: "hotel";
+      hotel: {
+        floor: number;
+        bedToBathroom_m?: number;
+      };
+      rail?: never;
+      accessibility: Record<string, string | number | boolean | null>;
+    }
+);
 
-Bridge Presenter가 이를 Agent-facing candidate로 투영한다.
-
-```ts
-type AgentCandidate = DomainCandidate & {
-  line: string; // 스크린리더/대화용 concise summary
-};
-```
-
-따라서 Agent는 `line`을 다시 파싱하지 않아도 `price`, `direction`, `side`, `distance` 같은 구조화 fact를 직접 사용할 수 있고, 사람에게 읽어줄 때만 `line`을 활용할 수 있다.
-
-`Comparison`도 인덱스 결합을 피한다.
-
-```ts
 type Comparison = {
   axes: { key: string; label: string }[];
   rows: {
-    ref: SpatialRef;
+    ref: string;
     values: Record<string, string | number | boolean | null>;
   }[];
+  unitsNote?: string;
+};
+
+type QueryData = {
+  items: Candidate[];
+  appliedCriteria: QueryCriteria;
+  totalMatched: number;
+  unitsNote?: string;
 };
 ```
 
-`axes[0]`과 `values[0]`의 순서를 맞춰야 하는 배열 계약보다 keyed value가 Agent와 테스트 모두에서 안전하다.
+Every `Comparison.rows` entry has exactly the keys named by `axes`; rows preserve input-ref order. Common axes include availability, so unavailable refs can be compared. Only `select` rejects an unavailable seat. There is no index-coupled value array, bare `price`, or undiscriminated domain block.
 
----
-
-## 6. `QueryCriteria`와 의미 검증
+## 6. Query and rendering contracts
 
 ```ts
 type QueryCriteria = {
-  // 공통
-  near?: SpatialRef;
-  maxSteps?: number;
-  priceMax?: number;
+  near?: string;
+  maxDistance_m?: number;
+  priceMax_usd?: number;
   availableOnly?: boolean;
-
-  // 도메인 고유
-  train?: {
-    direction?: "forward" | "backward";
-    side?: "window" | "aisle";
+  needs?: {
+    wheelchairSpace?: boolean;
+    transferSeat?: boolean;
+    movableArmrest?: boolean;
+    minFootSpace_in2?: number;
+    excludeExitRow?: boolean;
   };
-
+  rail?: {
+    facing?: "forward" | "backward";
+    side?: "window" | "aisle";
+    quietCar?: boolean;
+  };
   hotel?: {
     floorMin?: number;
     floorMax?: number;
-    bedToBathroomMaxSteps?: number;
+    bedToBathroomMax_m?: number;
   };
+};
+
+type RenderOptions = {
+  units?: "meters" | "feet" | "steps";
+  stepLength_m?: number;
+  directionStyle?: "relative" | "clock" | "cardinal";
+  walkSpeedPercent?: number;
 };
 ```
 
-검증:
+Normalization and validation:
 
-| 규칙 | 내용 | 위반 시 |
-| --- | --- | --- |
-| Q1 | `maxSteps`가 있으면 `near` 필수 | `INVALID_CRITERIA` |
-| Q2 | train domain은 `hotel` 블록 거부 | `UNSUPPORTED_CRITERIA` |
-| Q3 | hotel domain은 `train` 블록 거부 | `UNSUPPORTED_CRITERIA` |
-| Q4 | 지원하지 않는 조건을 silent-ignore하지 않는다 | Q2/Q3 |
-| Q5 | 실제 적용된 조건을 **normalized `appliedCriteria`** 로 반환 | — |
-| Q6 | `maxSteps`, `priceMax` 등 수치 조건은 finite + 0 이상 | `INVALID_CRITERIA` |
+| Field/rule | Contract |
+| --- | --- |
+| `availableOnly` | defaults to `true` and is present in `appliedCriteria` |
+| `units` | defaults to `feet` |
+| `directionStyle` | defaults to `relative` |
+| `stepLength_m` | defaults to `0.75`; finite and in `(0, +∞)`; stored as an inactive preference outside step rendering and consumed only when `units: "steps"` |
+| `walkSpeedPercent` | defaults to `100`; finite and in `(0, +∞)` |
+| distance, price, foot-space, floor bounds | finite and non-negative; `floorMin <= floorMax` when both exist |
+| `maxDistance_m` | requires `near`, otherwise `INVALID_CRITERIA` |
+| domain block | `hotel` in the rail MVP is `UNSUPPORTED_CRITERIA`, never ignored |
+| unknown input field | rejected by the input schema (`additionalProperties: false`) |
 
-`appliedCriteria`는 입력 echo가 아니다. Domain이 실제 적용한 기본값까지 포함한다.
-
-예를 들어 사용자가 `availableOnly`를 생략해도 MVP 기본값이 `true`라면:
+Meters and bearing/reference-frame values are source data. Feet, steps, relative, clock, and cardinal strings are presentation-boundary derivations. Authored data never contains steps. When `units === "steps"`, every spatial result that renders a step estimate includes:
 
 ```json
 {
-  "appliedCriteria": {
-    "near": "entrance",
-    "availableOnly": true,
-    "train": {
-      "direction": "forward",
-      "side": "window"
-    }
-  }
+  "unitsNote": "Step counts are converted from measured distance using an assumed 0.75 m stride and are approximate. Landmark counts (e.g. 'third row') are exact."
 }
 ```
 
-Bridge는 Agent에게 **“실제로 어떤 조건이 적용됐는가”**를 숨기지 않는다. 이 값은 사용자의 판단 근거를 보존하는 provenance다.
+The warning is represented at the result-data boundary: `LayoutSummary.unitsNote`, `QueryData.unitsNote`, `Description.unitsNote`, and `Comparison.unitsNote`; `Route` uses `rendered.unitsNote`. It is required whenever that result contains a step-rendered string and forbidden otherwise, so an Agent never has to infer approximation from prose alone.
 
----
+### 6.1 Query cardinality, order, and hints
+
+`query` filters first, sets `totalMatched` to the full pre-slice count, sorts deterministically, then returns the first 0–12 candidates. It has no pagination, cursor, continuation token, offset, or response count field outside `totalMatched`.
+
+Sort keys, in exact order:
+
+1. distance ascending when `near` exists;
+2. availability descending when `availableOnly === false`;
+3. `price_usd` ascending;
+4. rail row ascending;
+5. rail seat letter ascending;
+6. `ref` ascending as the final tie-breaker.
+
+For 13 or more matches, return 12 and provide one deterministic narrowing `hint`. Choose the first absent applicable axis in this order: `near`; `maxDistance_m` when `near` exists; `priceMax_usd`; `needs.minFootSpace_in2`; `needs.wheelchairSpace`; `needs.transferSeat`; `needs.movableArmrest`; `needs.excludeExitRow`; `rail.facing`; `rail.side`; `rail.quietCar`. If every applicable axis is present, choose the first active tighten-able axis: decrease `maxDistance_m`, decrease `priceMax_usd`, then increase `needs.minFootSpace_in2`. The hint names the field and direction and invents no threshold.
+
+Zero matches is success: `items: []`, `totalMatched: 0`, normalized `appliedCriteria`, and one deterministic relaxation `hint`. Choose the first active restriction in this order: set `availableOnly` false; increase/remove `maxDistance_m`; increase/remove `priceMax_usd`; decrease/remove `needs.minFootSpace_in2`; remove the first active boolean `needs` field in schema order; remove `rail.facing`, `rail.side`, then `rail.quietCar`; finally remove `near`. The hint names the field/direction and invents no value. `query` does not use `NO_MATCH` for an ordinary empty set.
+
+### 6.2 Compare semantics
+
+`compare` accepts exactly 2–4 unique valid refs. It returns exactly those refs in input order, with the same named axes for every row. It does not search, rank, apply the query cap, or silently drop an invalid ref. Unavailable refs are valid comparison inputs and expose `available` on the common axis; `select` alone returns `NOT_AVAILABLE` for them.
 
 ## 7. Route Engine
 
-Route Engine은 Wayfinder가 단순 action bridge가 아니라 **spatial semantic bridge**가 되게 하는 핵심이다.
-
-### 7.1 Route 타입
+The Route Engine is pure TypeScript. Geometry is meter-source and aisle-aware; rendering is derived.
 
 ```ts
-type RouteSegment =
-  | {
-      kind: "walk";
-      from: SpatialRef;
-      to: SpatialRef;
-      steps: number;
-      direction: "forward" | "backward" | "left" | "right";
-    }
-  | {
-      kind: "vertical";
-      from: SpatialRef;
-      to: SpatialRef;
-      floors: number;
-      method: "elevator" | "stairs";
-    };
+type RouteSegment = {
+  pathway_mode: "walkway" | "stairs" | "elevator" | "door" | "vestibule";
+  from: string;
+  to: string;
+  length_m: number;
+  traversal_time_s: number;
+  stair_count?: number;
+  min_width_m?: number;
+  max_slope?: number;
+  signpostedAs?: string;
+  bearing: {
+    frame: "egocentric" | "car_axis";
+    degrees: number;
+  };
+  countedFeatures?: {
+    feature: string;
+    count: number;
+  };
+  landmarksPassed: string[];
+};
 
 type Route = {
-  from: SpatialRef;
-  to: SpatialRef;
-  totalWalkingSteps: number;
+  from: string;
+  requestedTo: string;
+  to: string;
+  totalLength_m: number;
+  totalTraversalTime_s: number;
   segments: RouteSegment[];
-  turns: {
-    atStep: number;
-    direction: "left" | "right";
-  }[];
-  landmarks: string[];
-  summary: string;
-};
-```
-
-```text
-Route.segments
-    ├─ Agent 설명
-    ├─ UI RouteOverlay
-    └─ Unit Test
-```
-
-Agent 설명과 화면 화살표가 서로 다른 경로 로직을 사용하지 않는다.
-
-### 7.2 MVP 알고리즘 — 같은 row는 직접, 다른 row는 aisle 경유
-
-MVP 공간 가정:
-
-- 한 row 안의 횡방향 이동은 직접 가능하다고 모델링한다.
-- row 간 이동은 aisle에서만 가능하다.
-- 장애물·곡선 통로·좌석별 실제 진입 폭은 모델링하지 않는다.
-
-```text
-route(from, to):
-
-1. from / to 실제 grid 위치와 해당 row의 aisle col을 resolve
-
-2. from.row === to.row 이면:
-   from → to 직접 횡방향 walk segment
-   (0거리면 segment 생략)
-   → 6단계로 이동
-
-3. row가 다르면 from이 aisle 밖일 때:
-   from → 같은 row의 aisle anchor
-   횡방향 walk segment
-
-4. aisle을 따라 to.row까지
-   종방향 walk segment
-
-5. to가 aisle 밖이면:
-   to row의 aisle anchor → to
-   횡방향 walk segment
-
-6. 실제 segment 경로상의 landmark 수집
-
-7. segments로부터 totalWalkingSteps / turns 계산
-
-8. 같은 segments로 summary 생성
-```
-
-이 분기가 필요한 이유:
-
-```text
-4-12A → 4-12B
-```
-
-를 무조건 `A → aisle → B`로 계산하면 같은 좌석열 안의 짧은 이동을 과대 계산한다. 반대로 row가 다른 경우에는 aisle을 통하지 않고 좌석을 가로질러 이동하는 경로를 허용하면 안 된다.
-
-`4-12A → 4-12D`처럼 같은 row에서 통로를 건너는 경우도 MVP에서는 row 횡방향 직선 이동으로 계산한다. 이는 **격자 기반 접근성 추정 모델**이며 실제 객차 장애물 모델은 범위 밖이다.
-
-### 7.3 Calibration
-
-```ts
-export const STEP_CALIBRATION = {
-  rowPitchSteps: 2,
-  colPitchSteps: 1,
-};
-```
-
-걸음 수는 격자 기반 추정치다.
-
-실측 값처럼 표현하지 않으며 데모·제출 글에 이를 명시한다.
-
-### 7.4 D1 완료 테스트
-
-- `entrance → 4-12A` — 다른 row라면 aisle 경유 + 좌석 진입
-- `4-12A → restroom` — 좌석 이탈 비용 포함
-- `4-12A → luggage` — landmark 경유
-- `4-12A → 4-14D` — 횡 → 종 → 횡
-- `4-12A → 4-12D` — 같은 row, 통로 건넘 직접 횡이동
-- `4-12A → 4-12B` — **같은 row/같은 쪽 직접 횡이동, aisle 우회 금지**
-
-검증:
-
-- segment별 `steps`
-- `direction`
-- `totalWalkingSteps`
-- `turns`
-- `landmarks`
-- `summary`
-- 0-step segment가 결과에 남지 않음
-
----
-
-## 8. Application Layer
-
-Application은 **무엇을 수행할지**와 **상태가 어떻게 변할지**를 책임진다.
-
-```text
-application/
- ├─ get-layout.ts
- ├─ query.ts
- ├─ describe.ts
- ├─ get-route.ts
- ├─ compare.ts
- ├─ select.ts
- ├─ get-selection.ts
- ├─ undo.ts
- └─ confirm.ts
-```
-
-### 8.1 담당
-
-- 현재 Domain 라우팅
-- Domain Core 호출
-- App Store 상태 전이
-- 선택/undo/confirmation orchestration
-- Route 결과를 `activeRoute`에 반영
-- highlight 대상 갱신
-- confirmation UI coordinator 호출
-- Domain error를 typed Application error로 유지
-
-### 8.2 담당하지 않음
-
-- WebMCP API 호출
-- React component 접근
-- SVG 조작
-- Agent의 자연어 해석
-- 결과 리스트를 5개로 자르는 Agent-facing 규율
-- Browser Agent용 `hint` 생성
-
-마지막 두 항목은 Bridge의 책임이다.
-
----
-
-## 9. Spatial Accessibility Bridge Contract
-
-이 레이어가 Wayfinder의 **제품 차별점이 실제 코드 경계로 나타나는 곳**이다.
-
-```text
-bridge/
- ├─ tool-catalog.ts
- ├─ contracts.ts
- ├─ response-presenter.ts
- ├─ error-mapper.ts
- ├─ state-projector.ts
- └─ handlers/
-     ├─ get-layout.ts
-     ├─ query.ts
-     ├─ describe.ts
-     ├─ get-route.ts
-     ├─ compare.ts
-     ├─ select.ts
-     ├─ get-selection.ts
-     ├─ undo.ts
-     └─ confirm.ts
-```
-
-이것은 별도 서버나 microservice가 아니다.
-
-같은 브라우저 bundle 안의 **작은 boundary module**이다.
-
-### 9.1 Bridge의 5가지 책임
-
-#### B1. Semantic Exposure
-
-DOM 좌표나 컴포넌트 이름이 아니라 **공유 spatial model에서 계산된 공간 fact**를 노출한다.
-
-```text
-❌ button#seat-12A 클릭 가능
-
-✅ 4-12A
-   - window
-   - forward
-   - entrance 8 steps
-   - restroom relation
-```
-
-#### B2. Voice-bandwidth Shaping
-
-Agent에게 무제한 결과를 보내지 않는다.
-
-```ts
-const MAX_AGENT_ITEMS = 5;
-```
-
-Bridge Presenter가:
-
-- DomainCandidate의 구조화 fact 보존
-- 결과 최대 5개
-- `more`
-- 짧은 `line`
-- 다음 탐색 축 `hint`
-
-를 만든다. `line`은 편의 표현이며 Agent가 의미를 얻기 위해 다시 파싱해야 하는 유일한 정보원이 아니다.
-
-#### B3. State Projection
-
-조작 이후 Agent가 별도 화면 추측 없이 상태를 알 수 있어야 한다.
-
-```ts
-type SelectionState = {
-  selected: string[];
-  selectedCount: number;
-  priceTotal: number;
-  undoable: boolean;
-  status: "draft" | "confirmation_pending" | "confirmed";
-};
-```
-
-#### B4. Action Safety
-
-- 조회와 조작 Tool을 구분
-- `readOnlyHint`
-- unavailable seat 방지
-- confirmation pending 중 변경 차단
-- 최종 확정은 사람의 UI action 필요
-
-#### B5. Observability
-
-하나의 Bridge call에서:
-
-```text
-Agent Tool Result
-UI Highlight
-Tool Log
-Selection State
-```
-
-가 같은 use case 실행 결과를 공유한다.
-
----
-
-## 10. `a11y.*` Public Tool Contract
-
-| Tool | 목적 | Bridge가 추가로 보장하는 것 |
-| --- | --- | --- |
-| `a11y.get_layout` | 공간 개요 | 전체 좌석 나열 금지, landmark 중심 요약 + 현재 context |
-| `a11y.query` | 조건 탐색 | structured candidate facts + normalized appliedCriteria + 최대 5개 + more + hint |
-| `a11y.describe` | 대상 상세 | stable ref + 주변 관계 |
-| `a11y.get_route` | 이동 경로 | 동일 RoutePlan에서 파생한 structured route + summary |
-| `a11y.compare` | 후보 비교 | keyed axis/value로 축 의미 보존 |
-| `a11y.select` | 선택 | 전체 SelectionState 반환 |
-| `a11y.get_selection` | 상태 확인 | 화면과 동일 state |
-| `a11y.undo` | 마지막 조작 복원 | 복원 후 전체 state |
-| `a11y.confirm` | 확정 요청 | Agent 단독 확정 금지 |
-
-### 10.1 Tool naming
-
-`a11y.get_route`처럼 `.`을 포함한 이름을 그대로 사용한다.
-
-현재 WebMCP Community Draft의 tool name 규칙은 ASCII 영숫자와 `_`, `-`, `.`을 허용한다.
-
-따라서 `a11y_get_route` fallback은 두지 않는다.
-
-### 10.2 Tool metadata
-
-Tool metadata는 기능 의미만 포함한다.
-
-```ts
-{
-  name: "a11y.get_route",
-  title: "이동 경로 확인",
-  description:
-    "현재 열린 공간에서 두 지점 사이의 이동 경로와 방향을 반환한다.",
-  annotations: {
-    readOnlyHint: true,
-    untrustedContentHint: false
-  }
-}
-```
-
-현재 호차나 현재 선택처럼 변하는 데이터는 description에 넣지 않는다.
-
-동적 상태는 Tool Result로 노출한다.
-
----
-
-## 11. Tool Response Contract
-
-모든 Bridge 결과는 **JSON-serializable plain value**여야 한다. DOM node, 함수, `Error` 객체, class instance를 반환 계약에 넣지 않는다.
-
-```ts
-type BridgeContext = {
-  domain: "train" | "hotel";
-  layoutId: string;
-};
-
-type ToolResult<T> = {
-  ok: boolean;
-  context: BridgeContext;
-
-  data?: T;
-  state?: SelectionState;
-
-  more?: number;
-  hint?: string;
-
-  error?: {
-    code: ToolErrorCode;
-    message: string;
+  landmarks: Landmark[];
+  requiresContinuation: boolean;
+  checkpoint?: { ref: string; label: string };
+  rendered: {
+    units: "meters" | "feet" | "steps";
+    directionStyle: "relative" | "clock" | "cardinal";
+    instructions: string[];
+    summary: string;
+    unitsNote?: string;
   };
 };
 ```
 
-`context`를 항상 포함해 Agent가 현재 Tool 결과가 어느 공간에 대한 것인지 화면을 추측하지 않아도 되게 한다.
+`bearing.degrees` is finite and normalized to `[0, 360)`. In `car_axis`, `0` is the authored forward end of the car; in `egocentric`, `0` is the traveler’s incoming heading. Relative, clock, and cardinal instructions are derived only after this frame is known.
 
-### 11.1 Query
-
-Domain:
+`additionalTransferTime_s` is an optional OSDM-aligned portability fact outside the rail `Route` result; the rail MVP does not author or silently apply it. `walkSpeedPercent` alone scales rail walking time:
 
 ```text
-40개 조건 일치
+traversal_time_s = length_m / (1.2 × walkSpeedPercent / 100)
 ```
 
-Bridge:
+Algorithm:
 
-```json
-{
-  "ok": true,
-  "context": {
-    "domain": "train",
-    "layoutId": "4"
-  },
-  "data": {
-    "items": [
-      {
-        "ref": "4-12A",
-        "label": "12열 A",
-        "price": 47000,
-        "available": true,
-        "distance": { "from": "entrance", "steps": 8 },
-        "train": { "direction": "forward", "side": "window" },
-        "features": [],
-        "line": "12열 A, 창측, 순방향, 출입문에서 8걸음"
-      }
-    ],
-    "appliedCriteria": {
-      "near": "entrance",
-      "availableOnly": true,
-      "train": {
-        "direction": "forward",
-        "side": "window"
-      }
-    }
-  },
-  "more": 39,
-  "hint": "화장실 거리로 더 좁힐 수 있습니다."
-}
-```
+1. Resolve the exact meter coordinates for `from` and requested destination.
+2. If the origin is off-aisle, add its real lateral path to the same-row aisle anchor.
+3. Move longitudinally along the aisle to the destination row, recording exact counted rows and encountered landmarks.
+4. If the destination is off-aisle, add its real lateral path from the aisle anchor. A same-row, same-side direct path may be used only when the fixture marks it physically traversable.
+5. Calculate bearings, modes, lengths, widths/slopes/sign text when authored, and walking times.
+6. Merge only contiguous, collinear segments with identical `pathway_mode` and bearing.
+7. If at most four segments remain, return a complete route: `requestedTo === to`, `requiresContinuation: false`, no `checkpoint`, and aggregate totals equal every segment sum.
+8. If more than four remain, end at the last stable landmark reachable within four segments. Keep the original destination in `requestedTo`; set `to` and `checkpoint.ref` to that stable ref; set `requiresContinuation: true`; and make totals equal only the returned partial-leg segment sums. The next call uses `{ from: checkpoint.ref, to: requestedTo }`.
+9. Derive the requested rendering without changing `segments`.
 
-`line`은 음성/대화 편의를 위한 파생 표현이다. Agent는 핵심 판단을 `train.direction`, `train.side`, `distance.steps`, `price` 같은 구조화 필드로도 수행할 수 있다.
+A cross-aisle route such as `6-12A → 6-12D` cannot collapse to zero. Projecting both endpoints to the aisle before recording lateral movement is forbidden.
 
-### 11.2 조작 결과
+Required route acceptance cases:
 
-```json
-{
-  "ok": true,
-  "context": { "domain": "train", "layoutId": "4" },
-  "data": {
-    "selectedRef": "4-12A"
-  },
-  "state": {
-    "selected": ["4-12A"],
-    "selectedCount": 1,
-    "priceTotal": 47000,
-    "undoable": true,
-    "status": "draft"
-  }
-}
-```
+1. `entrance_front → 6-12A`: longitudinal plus aisle-to-seat lateral movement and `{ feature: "row", count: 6 }`.
+2. `6-12A → restroom`: seat-to-aisle lateral movement and landmark collection.
+3. `6-12A → 6-14D`: lateral–longitudinal–lateral three-segment route.
+4. `6-12A → 6-12D`: same-row cross-aisle route with `totalLength_m > 0`.
+5. `6-12A → 6-12B`: same-row, same-side direct movement when physically traversable.
+6. One route with all three units: identical `segments`; only `rendered` changes.
+7. `walkSpeedPercent: 50`: doubled `traversal_time_s`; unchanged `length_m`.
+8. More than four raw non-mergeable segments: at most four returned; original `requestedTo`; `to === checkpoint.ref`; partial totals equal returned segment sums; and a valid follow-up route.
 
-### 11.3 Domain error와 runtime error 분리
+## 8. Application Layer
 
-예상 가능한 사용자/도메인 오류도 가능하면 현재 `context`와 recovery hint를 보존한다.
-
-```json
-{
-  "ok": false,
-  "context": { "domain": "train", "layoutId": "4" },
-  "error": {
-    "code": "INVALID_CRITERIA",
-    "message": "거리 조건을 사용하려면 기준 위치를 함께 지정해야 합니다."
-  }
-}
-```
-
-WebMCP 등록 실패, 프로그래밍 오류, 예상하지 못한 exception은 `ToolResult`의 domain error처럼 위장하지 않는다. Adapter/bootstrap에서 따로 처리한다.
-
-### 11.4 현재 WebMCP에는 output schema가 없다
-
-2026-08-26 `ModelContextTool`은 `inputSchema`는 제공하지만 `outputSchema` 필드는 정의하지 않는다.
-
-따라서 Wayfinder의 `ToolResult<T>`는:
+There is one Application use case for each public tool. Human controls call these same use cases.
 
 ```text
-TypeScript type
-+ Bridge contract test
-+ Agent eval
+getLayout  query  describe  getRoute  compare
+select     getSelection     undo      confirm
 ```
 
-으로 보증한다. 향후 WebMCP에 output schema가 추가되면 Adapter에서 이 contract를 그대로 노출한다.
+Application responsibilities:
 
----
+- Route the request to the current `rail` domain.
+- Invoke pure Domain operations and normalize their results.
+- Apply the exact App Store transition atomically.
+- Update highlights, active route, tool log, and selection projections.
+- Coordinate the accessible confirmation dialog and timeout.
+- Preserve typed domain errors for Bridge mapping.
 
-## 12. State Architecture
+Application does not know WebMCP, register tools, manipulate SVG/DOM directly, interpret natural language, or recalculate presentation geometry. A tool call that fails validation still records a log entry but does not partially apply its intended domain transition.
 
-```ts
-type AppState = {
-  domain: "train" | "hotel";
-  layoutId: string;
+Observable effects by successful use case:
 
-  selection: string[];
-  confirmationStatus:
-    | "draft"
-    | "confirmation_pending"
-    | "confirmed";
-
-  activeRoute: Route | null;
-  highlightedRefs: string[];
-
-  toolLog: {
-    name: string;
-    args: Record<string, unknown>;
-    at: number;
-  }[];
-
-  history: {
-    selection: string[];
-    highlightedRefs: string[];
-  }[];
-};
-```
-
-```text
-              App Store
-             /         \
-        React UI      Application
-                          ↑
-                   Accessibility Bridge
-                          ↑
-                      WebMCP
-```
-
-Agent가 직접 Store를 읽지 않는다.
-
-Bridge가 필요한 상태만 `SelectionState`로 projection한다.
-
-### 12.1 도메인 전환
-
-Tool 이름과 schema가 Train/Hotel에서 같으므로 domain 전환 시 tool 재등록은 필요 없다.
-
-```text
-store.domain = "hotel"
-        ↓
-같은 a11y.query
-        ↓
-Application이 hotelDomain으로 라우팅
-```
-
----
-
-## 13. `a11y.confirm` — Human Control Boundary
-
-제품 invariant:
-
-> **Agent의 `a11y.confirm` 호출만으로 `confirmed`가 될 수 없다.**
-
-필수 조건은 다음이다.
-
-```text
-Agent confirm request
-        ↓
-사용자에게 접근 가능한 Confirmation UI
-        ↓
-사용자 직접 확인/취소
-        ↓
-최종 상태가 Agent에게 관찰 가능
-```
-
-### 13.1 Baseline — 인페이지 접근 가능한 confirmation
-
-2026-08-26 Community Draft에는 `requestUserInteraction()`이 현재 API로 정의되어 있지 않다. 따라서 MVP의 baseline은 **Wayfinder 페이지가 직접 제공하는 접근 가능한 ConfirmationDialog**다.
-
-오래된 proposal/일부 문서에 남아 있는 `requestUserInteraction()`을 필수 전제로 두지 않는다. 실제 target runtime이 별도 user-interaction primitive를 제공하고 동작이 검증된 경우에만 Adapter-level enhancement로 사용한다.
-
-### 13.2 1순위 구현 — blocking execution + execution signal
-
-최신 Community Draft는 `ToolExecuteCallbackOptions.signal`을 명시하며 Chrome Imperative API도 `execute(input, { signal })` 형태를 문서화한다.
-
-```text
-a11y.confirm()
-  ↓
-status = confirmation_pending
-  ↓
-ConfirmationDialog
-  ↓
-await user action / signal / timeout
-  ├─ confirm → confirmed
-  ├─ cancel  → draft
-  ├─ abort   → draft + execution aborted
-  └─ timeout → draft
-  ↓
-Tool result
-```
-
-```ts
-type ConfirmOutcome =
-  | "confirmed"
-  | "cancelled"
-  | "timeout";
-```
-
-Adapter:
-
-```ts
-execute: async (input, { signal }) => {
-  return bridge.confirm(input, { signal });
-};
-```
-
-Application의 ConfirmationCoordinator는 `AbortSignal`과 자체 timeout을 모두 받아야 한다. 취소/timeout 시 `confirmationStatus`를 반드시 `draft`로 복원한다.
-
-### 13.3 구현체 지연 fallback
-
-WebMCP는 아직 draft이고 target runtime이 최신 callback options를 구현하지 않았을 가능성은 Adapter에서 방어한다.
-
-```ts
-execute: async (input, options) => {
-  return bridge.confirm(input, {
-    signal: options?.signal
-  });
-};
-```
-
-또한 실제 ChatGPT/Chrome 통합에서 장시간 blocking execution 자체가 불안정하면 제품 원칙을 바꾸지 않고 다음으로 fallback할 수 있다.
-
-```text
-a11y.confirm
-  → status = confirmation_pending 반환
-
-사용자 UI confirm
-  → status = confirmed
-
-Agent
-  → a11y.get_selection
-  → confirmed 관찰
-```
-
-즉 **blocking은 구현 전략이고, human confirmation + 최종 상태 관찰 가능성은 제품 계약**이다.
-
----
-
-## 14. Undo
-
-전체 event sourcing은 사용하지 않는다.
-
-```text
-select 직전
-  ↓
-history.push(snapshot)
-  ↓
-selection 변경
-```
-
-```text
-undo
-  ↓
-history.pop()
-  ↓
-selection / highlight 복원
-  ↓
-전체 SelectionState 반환
-```
-
-`confirmation_pending` 중에는:
-
-```text
-select
-undo
-```
-
-모두 `CONFIRMATION_REQUIRED`로 차단한다.
-
----
-
-## 15. WebMCP Adapter
-
-이 계층은 **WebMCP 플랫폼 바인딩만** 담당한다.
-
-```text
-adapters/webmcp/
- ├─ model-context.ts
- ├─ register-tools.ts
- ├─ execution-context.ts
- ├─ capability.ts
- └─ schemas/
-```
-
-### 15.1 등록 및 execution signal
-
-```ts
-await document.modelContext.registerTool(
-  {
-    name: "a11y.get_route",
-    title: "이동 경로 확인",
-    description:
-      "현재 열린 공간에서 두 지점 사이의 이동 경로와 방향을 반환한다.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        from: { type: "string" },
-        to: { type: "string" }
-      },
-      required: ["from", "to"]
-    },
-    annotations: {
-      readOnlyHint: true,
-      untrustedContentHint: false
-    },
-    execute: async (input, { signal }) => {
-      return bridge.getRoute(input, { signal });
-    }
-  },
-  {
-    signal: registrationController.signal
-  }
-);
-```
-
-두 signal의 의미를 섞지 않는다.
-
-```text
-registrationController.signal
-→ Tool 등록 lifecycle / unregister
-
-execute(..., { signal })
-→ 개별 Tool execution cancellation
-```
-
-### 15.2 반환 형식과 serialization
-
-MCP 서버 스타일의 아래 envelope를 만들지 않는다.
-
-```text
-{ content: [...], isError: ... }
-```
-
-WebMCP `execute`는 asynchronous value를 반환할 수 있으므로 Bridge의 `ToolResult<T>` plain object를 직접 반환한다.
-
-단, 현재 execution plumbing은 결과를 serialize하여 Agent 쪽에 전달하므로 반환값은 JSON-serializable해야 한다.
-
-```ts
-execute: async (input, { signal }) => {
-  return bridge.query(input, { signal });
-};
-```
-
-현재 `ModelContextTool`에는 `outputSchema`가 없으므로 반환 스키마는 Bridge contract test로 강제한다 (§11.4).
-
-### 15.3 Tool lifecycle
-
-```text
-App mount
-  ↓
-registration AbortController 생성
-  ↓
-9개 Tool 등록
-
-App unmount
-  ↓
-registrationController.abort()
-```
-
-domain 전환은 tool lifecycle이 아니다.
-
-### 15.4 Capability / environment errors
-
-```ts
-type WebMCPCapability =
-  | "available"
-  | "unsupported"
-  | "insecure-context"
-  | "permission-denied"
-  | "security-rejected"
-  | "registration-failed";
-```
-
-```text
-!window.isSecureContext
-→ insecure-context
-
-registerTool 없음
-→ unsupported
-
-registerTool reject NotAllowedError
-→ permission-denied
-
-registerTool reject SecurityError
-→ security-rejected
-  (origin isolation / permissions-policy / origin 환경을 함께 점검)
-
-그 외 registration reject
-→ registration-failed
-
-성공
-→ available
-```
-
-WebMCP는 Secure Context 외에도 origin/Permissions Policy 조건의 영향을 받으므로 `isSecureContext` 하나만으로 지원 여부를 단정하지 않는다.
-
-WebMCP가 unavailable해도 React 접근성 UI는 정상 동작한다.
-
-### 15.5 Target runtime
-
-개발/검증 환경을 구분한다.
-
-```text
-WebMCP-enabled Chrome + inspector
-→ schema / registration / manual tool call / Agent eval 개발
-
-ChatGPT Desktop built-in browser Site Tools
-→ 최종 실제 Agent 통합 검증
-```
-
-ChatGPT Site Tools는 현재 데스크톱 앱의 built-in browser에서 WebMCP 페이지 도구를 발견해 사용하는 경로이므로 최종 데모는 이 환경을 기준으로 검증한다.
-
----
-
-## 16. Tool annotations
-
-조회 6종:
-
-```text
-a11y.get_layout
-a11y.query
-a11y.describe
-a11y.get_route
-a11y.compare
-a11y.get_selection
-```
-
-```ts
-readOnlyHint: true
-```
-
-조작 3종:
-
-```text
-a11y.select
-a11y.undo
-a11y.confirm
-```
-
-```ts
-readOnlyHint: false
-```
-
-현재 MVP 데이터는 프로젝트가 직접 관리하는 정적 공간 데이터이므로:
-
-```ts
-untrustedContentHint: false
-```
-
-향후 외부 사용자 리뷰나 제3자 텍스트를 반환하게 되면 해당 Tool은 별도로 `true`를 검토한다.
-
-`readOnlyHint: true`인 조회 Tool은 selection/confirmation 같은 **의사결정 상태를 변경하지 않는다.** Route overlay, highlight, tool log 같은 observability UI는 파생 presentation state로 취급한다. D2에서 target agent가 이 힌트를 엄격하게 해석해 문제가 생기면 힌트를 과장하지 말고 해당 Tool annotation을 조정한다.
-
----
-
-## 17. UI Architecture
-
-```text
-ui/
- ├─ layout/
- │   ├─ TrainSeatMap.tsx
- │   └─ HotelFloorMap.tsx
- ├─ overlay/
- │   └─ RouteOverlay.tsx
- ├─ panels/
- │   ├─ ToolLogPanel.tsx
- │   └─ SelectionPanel.tsx
- ├─ confirmation/
- │   └─ ConfirmationDialog.tsx
- ├─ accessibility/
- │   └─ StatusAnnouncer.tsx
- └─ capability/
-     └─ CapabilityBanner.tsx
-```
-
-### SeatMap
-
-- layout 렌더링
-- 키보드 탐색
-- ARIA label
-- 선택 표시
-- Tool 참조 대상 highlight
-
-### RouteOverlay
-
-`Domain RoutePlan`의 segments를 시각적으로 표현한다. Bridge의 Agent-facing route와 동일한 RoutePlan에서 파생되며, UI가 경로를 다시 계산하지 않는다.
-
-### ToolLogPanel
-
-심사자와 동반 사용자를 위한 시각적 observability다.
-
-Tool log 전체를 screen reader live region으로 읽게 하지는 않는다.
-
-### SelectionPanel
-
-현재 선택, 금액, confirmation 상태를 항상 보여준다.
-
-### StatusAnnouncer
-
-스크린리더에 필요한 **상태 변화만** concise하게 알린다.
-
-기본 구현은 `role="status"`, `aria-live="polite"`, `aria-atomic="true"`를 사용하고 Tool 실행 로그 전체를 live region으로 읽지 않는다.
-
-예:
-
-```text
-12열 A 선택됨. 현재 1석, 47,000원.
-```
-
-```text
-확정 대기 중입니다.
-```
-
-단, Agent가 이미 같은 상태 변화를 대화로 읽어주는 환경에서는 이중 음성 출력이 생길 수 있다. 상태 변경 이벤트에 source를 남겨 D4에서 정책을 검증한다.
-
-```ts
-type StateChangeSource = "human-ui" | "agent-tool";
-```
-
-권장 정책:
-
-- `human-ui` 변경: StatusAnnouncer가 즉시 알림
-- `agent-tool` 변경: 화면 상태는 갱신하되, Agent 응답과 중복되는 live announcement는 D4 결과에 따라 축소/비활성
-
-### ConfirmationDialog
-
-- `role="dialog"` + `aria-modal="true"`
-- 열릴 때 첫 확인 가능한 컨트롤로 focus 이동
-- focus trap
-- 명확한 confirm / cancel
-- Escape 취소
-- 닫힐 때 가능한 경우 이전 page focus 복원
-- 사용자 직접 action만 confirmed
-
-**통합 게이트:** Agent가 `a11y.confirm`을 호출했을 때 ChatGPT Desktop built-in browser에서 실제 키보드/스크린리더 focus가 dialog로 접근 가능한지 D2/D4에서 반드시 검증한다. 자동 focus 이동이 target runtime에서 안정적으로 동작하지 않으면 blocking 방식만 고집하지 않고 §13.3 pending fallback을 사용한다.
-
----
-
-## 18. Train / Hotel 재사용
-
-공유:
-
-```text
-SpatialDomain
-QueryCriteria
-LayoutSummary
-Route
-Application use cases
-Bridge contracts
-Tool names
-Tool schema
-SelectionState
-WebMCP Adapter
-```
-
-도메인별:
-
-| Train | Hotel |
+| Use case | Shared-state effect |
 | --- | --- |
-| Seat rendering | Room rendering |
-| seat attributes | room attributes |
-| entrance/restroom/luggage | elevator/stairs/ice_machine |
+| `getLayout` | log; highlight reference points |
+| `query` | log with normalized `appliedCriteria`; highlight returned refs |
+| `describe` | log; highlight described ref |
+| `getRoute` | log; set `activeRoute`; highlight route refs; render overlay from segments |
+| `compare` | log; highlight the exact input refs |
+| `select` | snapshot, selection, highlights, log |
+| `getSelection` | log; highlight selected refs |
+| `undo` | restore one snapshot; log |
+| `confirm` | same-call pending/terminal transition; log |
 
-**동일 UI가 아니라 동일 Agent Contract를 증명하는 것이 목표다.**
+These visible/log effects are real state changes and drive the annotation erratum in §16.
 
----
+## 9. Spatial Accessibility Bridge contract
 
-## 19. Error Contract
+The Bridge is a small in-browser boundary module, not a server or microservice. Its responsibilities are:
+
+1. **Semantic exposure:** stable refs and structured facts, never DOM selectors.
+2. **Validation:** exact schema, semantic, cardinality, and domain applicability checks.
+3. **Presentation projection:** derived one-line summaries, distance/direction rendering, and deterministic hints without destroying source facts.
+4. **State projection:** full, derived `SelectionState` where §10 requires it.
+5. **Action safety:** availability checks, one-step undo, mutation lock, and human-only confirmation.
+6. **Observability:** one use-case result drives tool output, highlights/overlay, and tool log.
+7. **Error separation:** expected domain failures fulfill with `ok: false`; runtime/programming/cancellation failures reject.
+
+The Bridge does not cap compare results, paginate query results, infer user intent, or silently drop unsupported fields. The output size contract is semantic: query returns at most 12 candidates; route returns at most four segments per leg. Host output-size guidance cannot remove required fields.
+
+## 10. Canonical nine-tool public contract
+
+The `a11y.` prefix and these nine names are the complete MVP tool catalog. `a11y.set_preferences` is not a tenth MVP tool; preferences are session state and `RenderOptions` unless a future version explicitly adds it.
+
+### 10.1 Canonical tool matrix
+
+| Tool | Exact input | Exact successful `data` | `SelectionState` projection |
+| --- | --- | --- | --- |
+| `a11y.get_layout` | `RenderOptions` | `LayoutSummary` | forbidden |
+| `a11y.query` | `QueryCriteria & RenderOptions` | `QueryData` | forbidden |
+| `a11y.describe` | `{ ref: string } & RenderOptions` | `Description` | forbidden |
+| `a11y.get_route` | `{ from: string; to: string } & RenderOptions` | `Route` | forbidden |
+| `a11y.compare` | `{ refs: string[] } & RenderOptions`; 2–4 unique valid refs | `Comparison` with the same refs in input order | forbidden |
+| `a11y.select` | `{ ref: string }` | `{ selectedRef: string }` | required on success and expected failure |
+| `a11y.get_selection` | `{}` | `{ selected: string[] }` | required on success; forbidden on expected failure |
+| `a11y.undo` | `{}` | `{ undone: string \| null }` | required on success and expected failure |
+| `a11y.confirm` | `{}` | `{ outcome: "confirmed" \| "cancelled" \| "timeout" }` | required on success and expected failure, in the same call |
+
+### 10.2 Canonical input JSON Schemas
+
+The implementation may generate these objects, but generated schemas must deep-equal this catalog. Every object rejects unknown fields.
+
+```json
+{
+  "$defs": {
+    "RenderOptionsProperties": {
+      "units": { "type": "string", "enum": ["meters", "feet", "steps"] },
+      "stepLength_m": { "type": "number", "exclusiveMinimum": 0 },
+      "directionStyle": { "type": "string", "enum": ["relative", "clock", "cardinal"] },
+      "walkSpeedPercent": { "type": "number", "exclusiveMinimum": 0 }
+    },
+    "Needs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wheelchairSpace": { "type": "boolean" },
+        "transferSeat": { "type": "boolean" },
+        "movableArmrest": { "type": "boolean" },
+        "minFootSpace_in2": { "type": "number", "minimum": 0 },
+        "excludeExitRow": { "type": "boolean" }
+      }
+    },
+    "RailCriteria": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "facing": { "type": "string", "enum": ["forward", "backward"] },
+        "side": { "type": "string", "enum": ["window", "aisle"] },
+        "quietCar": { "type": "boolean" }
+      }
+    },
+    "HotelCriteria": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "floorMin": { "type": "number", "minimum": 0 },
+        "floorMax": { "type": "number", "minimum": 0 },
+        "bedToBathroomMax_m": { "type": "number", "minimum": 0 }
+      }
+    }
+  },
+  "tools": {
+    "a11y.get_layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "units": { "$ref": "#/$defs/RenderOptionsProperties/units" },
+        "stepLength_m": { "$ref": "#/$defs/RenderOptionsProperties/stepLength_m" },
+        "directionStyle": { "$ref": "#/$defs/RenderOptionsProperties/directionStyle" },
+        "walkSpeedPercent": { "$ref": "#/$defs/RenderOptionsProperties/walkSpeedPercent" }
+      }
+    },
+    "a11y.query": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "near": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "maxDistance_m": { "type": "number", "minimum": 0 },
+        "priceMax_usd": { "type": "number", "minimum": 0 },
+        "availableOnly": { "type": "boolean" },
+        "needs": { "$ref": "#/$defs/Needs" },
+        "rail": { "$ref": "#/$defs/RailCriteria" },
+        "hotel": { "$ref": "#/$defs/HotelCriteria" },
+        "units": { "$ref": "#/$defs/RenderOptionsProperties/units" },
+        "stepLength_m": { "$ref": "#/$defs/RenderOptionsProperties/stepLength_m" },
+        "directionStyle": { "$ref": "#/$defs/RenderOptionsProperties/directionStyle" },
+        "walkSpeedPercent": { "$ref": "#/$defs/RenderOptionsProperties/walkSpeedPercent" }
+      }
+    },
+    "a11y.describe": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ref": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "units": { "$ref": "#/$defs/RenderOptionsProperties/units" },
+        "stepLength_m": { "$ref": "#/$defs/RenderOptionsProperties/stepLength_m" },
+        "directionStyle": { "$ref": "#/$defs/RenderOptionsProperties/directionStyle" },
+        "walkSpeedPercent": { "$ref": "#/$defs/RenderOptionsProperties/walkSpeedPercent" }
+      },
+      "required": ["ref"]
+    },
+    "a11y.get_route": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "to": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "units": { "$ref": "#/$defs/RenderOptionsProperties/units" },
+        "stepLength_m": { "$ref": "#/$defs/RenderOptionsProperties/stepLength_m" },
+        "directionStyle": { "$ref": "#/$defs/RenderOptionsProperties/directionStyle" },
+        "walkSpeedPercent": { "$ref": "#/$defs/RenderOptionsProperties/walkSpeedPercent" }
+      },
+      "required": ["from", "to"]
+    },
+    "a11y.compare": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "refs": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+        },
+        "units": { "$ref": "#/$defs/RenderOptionsProperties/units" },
+        "stepLength_m": { "$ref": "#/$defs/RenderOptionsProperties/stepLength_m" },
+        "directionStyle": { "$ref": "#/$defs/RenderOptionsProperties/directionStyle" },
+        "walkSpeedPercent": { "$ref": "#/$defs/RenderOptionsProperties/walkSpeedPercent" }
+      },
+      "required": ["refs"]
+    },
+    "a11y.select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "ref": { "type": "string", "minLength": 1, "maxLength": 128 } },
+      "required": ["ref"]
+    },
+    "a11y.get_selection": { "type": "object", "additionalProperties": false, "properties": {} },
+    "a11y.undo": { "type": "object", "additionalProperties": false, "properties": {} },
+    "a11y.confirm": { "type": "object", "additionalProperties": false, "properties": {} }
+  }
+}
+```
+
+In addition to schema validation, Application enforces finite numbers, consumes `stepLength_m` only with `units: "steps"`, requires `maxDistance_m` only with `near`, checks `floorMin <= floorMax`, rejects inactive-domain blocks, and resolves valid loaded refs.
+
+### 10.3 Canonical output JSON Schemas
+
+The machine-valid Draft 2020-12 output catalog is [bearing-output.schema.json](./contracts/bearing-output.schema.json). Its nine top-level properties map one-to-one to this section's tool matrix and reference complete success/failure envelopes plus all nested result types. WebMCP currently has no `outputSchema` registration member, so the Adapter does not send this catalog to `registerTool`; Bridge contract tests validate every fulfilled result against the corresponding `$defs/*Output` schema and then verify the cross-field invariants that JSON Schema cannot express (derived totals, query hint conditions, row/axis equality, continuation endpoints, and step-warning presence).
+
+The input bundle above is documentation shorthand. Registration builds each tool's individual schema by copying the shared `$defs` into that tool schema; it never passes the outer `tools` catalog object as `inputSchema`, and contract tests resolve every `$ref` before registration.
+
+### 10.4 Canonical successful examples
+
+Examples show the complete successful envelope, including required state projection.
+
+| Tool | Example input | Example successful projection |
+| --- | --- | --- |
+| `a11y.get_layout` | `{ "units": "feet" }` | `{ "ok": true, "data": { "domain": "rail", "layoutId": "Car 6, Business Class", "bounds_m": { "length": 26.4, "width": 3.1 }, "seatCount": { "total": 60, "available": 47 }, "accessibleCount": { "wheelchairSpaces": 2, "transferSeats": 2, "movableArmrestSeats": 16 }, "landmarks": [], "referencePoints": ["entrance_front", "restroom"], "summary": "One single-level intercity rail car." } }` |
+| `a11y.query` | `{ "near": "restroom", "rail": { "facing": "forward", "side": "window" } }` | `{ "ok": true, "data": { "items": [{ "ref": "6-12A", "label": "Seat 12A", "line": "Seat 12A, forward-facing window seat.", "price_usd": 72, "available": true, "features": ["power_outlet"], "distance": { "from": "restroom", "distance_m": 7.3, "rendered": "24 feet" }, "domain": "rail", "rail": { "row": 12, "seatLetter": "A", "side": "window", "facing": "forward" }, "accessibility": { "wheelchairSpace": false, "transferSeat": false, "companionSeat": false, "movableArmrest": true, "footSpace_in2": 288, "bulkhead": false, "exitRow": false } }], "appliedCriteria": { "near": "restroom", "availableOnly": true, "rail": { "facing": "forward", "side": "window" } }, "totalMatched": 1 } }` |
+| `a11y.describe` | `{ "ref": "6-12A", "directionStyle": "relative" }` | `{ "ok": true, "data": { "ref": "6-12A", "line": "Seat 12A is a forward-facing window seat.", "attributes": { "price_usd": 72, "available": true }, "relations": [{ "to": "restroom", "distance_m": 7.3, "rendered": "24 feet toward the rear", "landmarksPassed": ["luggage_rack"] }], "followUps": ["Ask for the route from the front entrance."] } }` |
+| `a11y.get_route` | `{ "from": "entrance_front", "to": "6-12A" }` | `{ "ok": true, "data": { "from": "entrance_front", "requestedTo": "6-12A", "to": "6-12A", "totalLength_m": 7.3, "totalTraversalTime_s": 6.08, "segments": [{ "pathway_mode": "walkway", "from": "entrance_front", "to": "row_12_aisle", "length_m": 6.7, "traversal_time_s": 5.58, "bearing": { "frame": "car_axis", "degrees": 180 }, "countedFeatures": { "feature": "row", "count": 6 }, "landmarksPassed": [] }, { "pathway_mode": "walkway", "from": "row_12_aisle", "to": "6-12A", "length_m": 0.6, "traversal_time_s": 0.5, "bearing": { "frame": "egocentric", "degrees": 270 }, "landmarksPassed": [] }], "landmarks": [], "requiresContinuation": false, "rendered": { "units": "feet", "directionStyle": "relative", "instructions": ["Move toward the rear, passing 6 rows.", "Move left from the aisle to seat 12A."], "summary": "Walk toward the rear, then move left to seat 12A." } } }` |
+| `a11y.compare` | `{ "refs": ["6-12A", "6-14D"] }` | `{ "ok": true, "data": { "axes": [{ "key": "available", "label": "Available" }, { "key": "price_usd", "label": "Price (USD)" }], "rows": [{ "ref": "6-12A", "values": { "available": true, "price_usd": 72 } }, { "ref": "6-14D", "values": { "available": false, "price_usd": 68 } }] } }` |
+| `a11y.select` | `{ "ref": "6-12A" }` | `{ "ok": true, "data": { "selectedRef": "6-12A" }, "state": { "selected": ["6-12A"], "selectedCount": 1, "priceTotal_usd": 72, "undoable": true, "status": "draft" } }` |
+| `a11y.get_selection` | `{}` | `{ "ok": true, "data": { "selected": ["6-12A"] }, "state": { "selected": ["6-12A"], "selectedCount": 1, "priceTotal_usd": 72, "undoable": true, "status": "draft" } }` |
+| `a11y.undo` | `{}` | `{ "ok": true, "data": { "undone": "6-12A" }, "state": { "selected": [], "selectedCount": 0, "priceTotal_usd": 0, "undoable": false, "status": "draft" } }` |
+| `a11y.confirm` | `{}` | `{ "ok": true, "data": { "outcome": "confirmed" }, "state": { "selected": ["6-12A"], "selectedCount": 1, "priceTotal_usd": 72, "undoable": false, "status": "confirmed" } }` |
+
+The route example satisfies the §7 aggregate invariants: segment lengths total 7.3 m and segment traversal times total 6.08 seconds.
+
+## 11. Tool result and selection-state contract
 
 ```ts
 type ToolErrorCode =
@@ -1359,578 +673,681 @@ type ToolErrorCode =
   | "UNSUPPORTED_CRITERIA"
   | "NOTHING_TO_UNDO"
   | "CONFIRMATION_REQUIRED";
+
+type SelectionState = {
+  selected: string[];
+  selectedCount: number;
+  priceTotal_usd: number;
+  undoable: boolean;
+  status: "draft" | "confirmation_pending" | "confirmed";
+};
+
+type DomainError = {
+  code: ToolErrorCode;
+  message: string;
+};
+
+type ReadSuccess<T> = {
+  ok: true;
+  data: T;
+  state?: never;
+  error?: never;
+  hint?: never;
+};
+
+type QuerySuccess<T> = {
+  ok: true;
+  data: T;
+  state?: never;
+  error?: never;
+  hint?: string;
+};
+
+type StateSuccess<T> = {
+  ok: true;
+  data: T;
+  state: SelectionState;
+  error?: never;
+  hint?: never;
+};
+
+type ReadFailure = {
+  ok: false;
+  data?: never;
+  state?: never;
+  error: DomainError;
+  hint?: string;
+};
+
+type StateFailure = {
+  ok: false;
+  data?: never;
+  state: SelectionState;
+  error: DomainError;
+  hint?: string;
+};
+
+type ToolResult<T> =
+  | ReadSuccess<T>
+  | QuerySuccess<T>
+  | StateSuccess<T>
+  | ReadFailure
+  | StateFailure;
 ```
 
-`WEBMCP_UNAVAILABLE`은 ToolError가 아니다.
+Bindings remove the broad union’s otherwise invalid combinations:
 
-WebMCP가 unavailable하면 Tool 자체를 호출할 수 없으므로 Bootstrap capability 상태로 처리한다.
+- `get_layout`, `describe`, `get_route`, and `compare`: `ReadSuccess<T> | ReadFailure`.
+- `query`: `QuerySuccess<T> | ReadFailure`. `hint` is required exactly when `totalMatched === 0` or `totalMatched >= 13`, and forbidden for 1–12 matches.
+- `get_selection`: `StateSuccess<T> | ReadFailure`.
+- `select`, `undo`, and `confirm`: `StateSuccess<T> | StateFailure`; full state is required even when the expected action fails.
+- A domain-failure `hint` is optional only when a deterministic recovery action exists; `error` is always required and `data` is forbidden.
 
-Bridge error message는:
+Unexpected programming failures, registration failures, document teardown, and per-call abort do not masquerade as `ok: false`; the execution promise rejects or follows host cancellation. Every fulfilled result is a JSON-serializable plain value.
 
-- 짧고
-- 그대로 읽어도 이해되고
-- 다음 행동을 방해하지 않아야 한다.
+`selectedCount` and `priceTotal_usd` are selectors derived from `selected`, never independently writable. `undoable` means an undo can succeed now: `confirmationStatus === "draft" && history.length > 0`. Contract tests reconstruct all three after every transition, including failure, confirmation, and undo.
 
-내부 stack trace는 노출하지 않는다.
+## 12. State architecture
 
----
+```ts
+type UndoSnapshot = {
+  selection: string[];
+  highlightedRefs: string[];
+  confirmationStatus: "draft" | "confirmation_pending" | "confirmed";
+  activeRoute: Route | null;
+};
 
-## 20. Bridge Contract Eval
+type AppState = {
+  domain: "rail" | "hotel";
+  layoutId: string;
+  selection: string[];
+  confirmationStatus: "draft" | "confirmation_pending" | "confirmed";
+  activeRoute: Route | null;
+  highlightedRefs: string[];
+  toolLog: {
+    name: string;
+    args: Record<string, unknown>;
+    appliedCriteria?: QueryCriteria;
+    resultRefs: string[];
+    at: number;
+  }[];
+  history: UndoSnapshot[];
+  prefs: RenderOptions;
+};
+```
 
-Domain unit test만 통과해서는 **실제 Bridge가 사용자 불편을 해결하는지 증명되지 않는다.**
+Initial state is `domain: "rail"`, `layoutId: "Car 6, Business Class"`, empty selection/highlights/history/log, `confirmationStatus: "draft"`, `activeRoute: null`, and normalized preferences `{ units: "feet", stepLength_m: 0.75, directionStyle: "relative", walkSpeedPercent: 100 }`.
 
-Agent가 contract를 제대로 이해하는지를 별도 eval로 검증한다.
+UI preference controls update `prefs`; an explicit per-call `RenderOptions` value overrides the session default for that call without creating a new public tool. Tool log records normalized `appliedCriteria` for query, exact input arguments, result refs in result order, and a timestamp. Every UI and tool projection reads this state; no duplicate Agent-only store exists.
 
-### EVAL-01 탐색
+`select(ref)` has append-idempotent semantics. A valid available ref not already selected pushes one snapshot, appends the ref once, and returns it as `selectedRef`. Selecting an already-selected ref succeeds with the same single occurrence, updates only the observable log/highlight projection, pushes no snapshot, and leaves price/count/history unchanged. Invalid or unavailable refs fail with full unchanged state and push no snapshot. Selection never toggles or replaces another ref implicitly.
 
-사용자:
+## 13. Human confirmation boundary
+
+`a11y.confirm` is one asynchronous call with a human-controlled terminal event, not a two-call polling protocol.
+
+1. Preconditions: `confirmationStatus === "draft"` and `selection.length > 0`.
+2. Capture the pre-confirm snapshot, set `confirmationStatus` to `confirmation_pending`, open the accessible in-page dialog, move focus safely, and start a 120-second timer.
+3. While pending, `select`, `undo`, and duplicate `confirm` fulfill with `CONFIRMATION_REQUIRED` plus unchanged full state. Read operations and `get_selection` remain available.
+4. The first terminal event wins once:
+   - human Confirm → `{ outcome: "confirmed" }`, status `confirmed`;
+   - human Cancel → `{ outcome: "cancelled" }`, restore pre-confirm selection, highlights, route, and `draft` status;
+   - 120-second timeout → `{ outcome: "timeout" }`, perform the same restoration.
+5. Per-call `options.signal` abort, document teardown, or unexpected dialog failure closes the dialog, removes timer/listeners, restores the pre-confirm snapshot, restores focus if the document remains active, and rejects/cancels the execution. Agent abort is never reported as human `cancelled`.
+6. Terminal resolution is guarded by a single idempotent settle operation. Racing UI actions and late callbacks cannot settle twice, reopen the dialog, or overwrite terminal state.
+
+There is no public `confirmation_pending` outcome and no early return that asks the Agent to poll. Blocking execution is an Application contract implemented with a promise; it is not described as a standardized WebMCP user-interaction primitive. If either target runtime cannot sustain the contract, evidence is recorded as an open blocker and any public change requires a separately versioned technical erratum.
+
+After status is `confirmed`, `select`, `undo`, and another `confirm` are locked with `CONFIRMATION_REQUIRED`; this MVP has no reopen/edit-confirmed workflow.
+
+## 14. Undo contract
+
+Undo is one-step snapshot restoration, not event sourcing.
+
+- Immediately before a successful `select` mutates state, push one `UndoSnapshot` containing exactly selection, highlighted refs, confirmation status, and active route.
+- Do not push for validation failure, unavailable selection, read operation, `get_selection`, a failed undo, or confirmation’s temporary pending state.
+- A successful `undo` pops exactly one snapshot, restores all four fields atomically, and returns the ref removed by that restoration or `null` when the transition changed no selected ref.
+- `selectedCount`, `priceTotal_usd`, and `undoable` are recomputed after restoration; they are not snapshot fields.
+- Empty history returns `NOTHING_TO_UNDO` with unchanged full state.
+- Pending or confirmed status returns `CONFIRMATION_REQUIRED` with unchanged full state.
+- Confirmation cancellation, timeout, abort, or dialog failure restores its private pre-confirm snapshot without consuming or creating the user’s undo history.
+
+Tests assert coherent selection, highlights, active route, status, totals, and `undoable` after success and every failure path.
+
+## 15. WebMCP Adapter
+
+The Adapter binds the Bridge to the current WebMCP draft and contains no business logic.
+
+```ts
+await document.modelContext.registerTool(
+  {
+    name: "a11y.get_route",
+    description:
+      "Return a structured route between two valid refs in the current layout, " +
+      "including meter-source segments, landmarks, and requested rendering.",
+    inputSchema: getRouteInputSchema,
+    annotations: {
+      readOnlyHint: false,
+      untrustedContentHint: false
+    },
+    execute: async (input, { signal }) => {
+      return bridge.getRoute(input, { signal });
+    }
+  },
+  { signal: registrationController.signal }
+);
+```
+
+The signals have different owners:
 
 ```text
-4호차에 순방향 창측이면서 출입문 가까운 자리 있어?
+registerTool(definition, { signal }) → registration lifecycle
+execute(input, { signal })          → one call’s cancellation
 ```
 
-기대:
+Tool descriptions are static and current layout data comes from tool results. Tool names are 1–128 characters and use only ASCII alphanumerics, `_`, `-`, and `.`; all nine public names conform.
 
-```text
-a11y.query({
-  near: "entrance",
-  train: {
-    direction: "forward",
-    side: "window"
-  }
-})
+Each `execute` fulfills directly with a JSON-serializable `ToolResult` plain object. Do not wrap it in an MCP-server content envelope. Returned graphs contain no DOM node, function, class instance, circular reference, `BigInt`, non-finite number, or other non-JSON value. Exact round-trip output shape is verified in both target runtimes because WebMCP remains experimental.
+
+All Agent-supplied arguments and all fixture/result strings are treated as text at the UI boundary even while the MVP fixture is independently authored. Components use framework-escaped text nodes or DOM `textContent`; they never interpolate these values into `innerHTML`, executable markup, CSS, URLs, or ARIA-ID attributes. Public string inputs are schema-bounded to 1–128 characters for refs and 1–300 characters for other free text. Expected errors use fixed templates and never echo an invalid raw ref; the visible tool log may show an escaped, length-bounded projection while the in-memory structured record remains intact. Contract and browser tests pass HTML/script-like refs, labels, sign text, arguments, and error triggers through every visible sink and assert that no element, handler, navigation, style, or accessible-tree node is injected.
+
+Capability diagnostics remain outside `ToolErrorCode`:
+
+```ts
+type WebMCPCapability =
+  | "available"
+  | "unsupported"
+  | "insecure-context"
+  | "permission-denied"
+  | "security-rejected"
+  | "registration-failed";
 ```
 
-검증:
+- insecure document → `insecure-context`;
+- no callable `document.modelContext.registerTool` → `unsupported`;
+- registration `NotAllowedError` → `permission-denied`;
+- registration `SecurityError` → `security-rejected`;
+- other registration rejection → `registration-failed`.
 
-- 적절한 Tool 선택
-- 조건 누락 없음
-- 5개 이하 결과
-- appliedCriteria 정확
+Registration requires a Secure Context, an origin-keyed document/agent cluster where applicable, and `tools` Permissions Policy permission. MVP registration is top-level only; iframe and cross-origin exposure are outside scope. Aborting the registration controller removes all nine tools. Domain/state changes do not re-register them.
 
-### EVAL-02 대화형 참조
+Target-runtime evidence is required from both ChatGPT’s in-app browser and Google Chrome 149 or later with the WebMCP testing flag enabled.
 
-직전 query:
+## 16. Tool annotations
 
-```text
-1. 4-12A
-2. 4-14C
-3. 4-9A
-```
+**Official/spec erratum:** PRD §7.1 marks nominal lookups read-only, but the current draft defines `readOnlyHint: true` as modifying no state. Every Bearing invocation changes visible/log state through §8, so all nine tools use `false`.
 
-사용자:
+| Tool | `readOnlyHint` | `untrustedContentHint` |
+| --- | --- | --- |
+| `a11y.get_layout` | `false` | `false` |
+| `a11y.query` | `false` | `false` |
+| `a11y.describe` | `false` | `false` |
+| `a11y.get_route` | `false` | `false` |
+| `a11y.compare` | `false` | `false` |
+| `a11y.select` | `false` | `false` |
+| `a11y.get_selection` | `false` | `false` |
+| `a11y.undo` | `false` | `false` |
+| `a11y.confirm` | `false` | `false` |
 
-```text
-두 번째 거 화장실까지 얼마나 걸려?
-```
+`untrustedContentHint: false` is valid only while results are independently authored static fixture content. Before accepting third-party or user-generated text/data, reassess each affected tool. A future call can use `readOnlyHint: true` only if it changes no application, presentation, DOM, log, preference, or persisted state.
 
-기대:
+## 17. Accessible Human UI architecture
 
-```text
-a11y.get_route({
-  from: "4-14C",
-  to: "restroom"
-})
-```
+The UI is a complete non-Agent client of Application, not a visualization shell around tools.
 
-Wayfinder가 `"두 번째 거"`를 자연어로 해석하지 않는다.
+| ID | Component/behavior | Acceptance evidence |
+| --- | --- | --- |
+| UI1 | `RailSeatGrid`: CSS Grid generated from fixture positions | Grid geometry and labels match the same seats consumed by Domain; no copied operator artwork |
+| UI2 | Shared `highlightedRefs` style for every ref touched by a tool or human use case | A live query/describe/compare/select call highlights exactly `resultRefs`; focus indication remains distinct |
+| UI3 | `RouteOverlay`: SVG generated only from `activeRoute.segments` | Overlay endpoints/bearings match segments; UI performs no route calculation; continuation ends at checkpoint |
+| UI4 | `ToolLogPanel`: tool name, exact args, normalized `appliedCriteria`, result refs, timestamp | Query log visibly distinguishes requested args from applied defaults; failed calls remain diagnosable |
+| UI5 | Persistent `SelectionPanel`: selected refs, USD total, and confirmation status | Values equal the `SelectionState` selectors after select, failure, undo, cancel, timeout, and confirm |
+| UI6 | Complete keyboard/ARIA human workflow | With WebMCP disabled, a keyboard/screen-reader user can filter, describe, route, compare, select, inspect selection, undo, change preferences, and confirm |
+| UI7 | `ConfirmationDialog`: focus-safe, `role="dialog"`, `aria-modal="true"`, explicit Confirm/Cancel, Escape cancellation | Only human activation produces confirmed; focus enters safely and returns after every terminal/abort path |
+| UI8 | `CapabilityBanner` for non-available capability states | Banner identifies unsupported/insecure/permission/security/registration category; all human controls still work |
 
-**stable result order와 ref를 제공하여 외부 Agent가 해소할 수 있게 한다.**
+UI6 requires all of these visible, labeled controls:
 
-### EVAL-03 비교
+- an accessible filter form for every rail-applicable `QueryCriteria` field;
+- route `from`/`to` controls with stable refs;
+- candidate checkboxes enforcing 2–4 unique refs for comparison;
+- seat description/details and relations;
+- select plus current-selection inspection;
+- undo;
+- units, step length, direction style, and walk-speed preferences; and
+- confirmation.
 
-사용자:
+`RailSeatGrid` has a programmatic name and `role="grid"`; each visual row has `role="row"`, and each seat has `role="gridcell"` with position, availability, USD price, direction, side, and relevant accessibility facts in its accessible name/description. It uses roving `tabindex`: exactly one enabled gridcell is `0`, all other enabled gridcells are `-1`, arrows move spatially, Home/End move within the row, and Tab enters or leaves the grid without trapping focus. Selection state uses `aria-selected` and is not conflated with keyboard focus.
 
-```text
-그거랑 12A 비교해줘
-```
+`ConfirmationDialog` has `role="dialog"`, `aria-modal="true"`, and an accessible name through `aria-labelledby` (or a nonempty `aria-label` fallback). While open, content outside the dialog is `inert`; focus starts on the least destructive sensible control, cycles only within the dialog, Escape cancels, and every terminal/abort path removes `inert` and restores focus to the invoker when it still exists. A concise `role="status"`, `aria-live="polite"`, `aria-atomic="true"` announcer reports meaningful state changes, not the entire tool log. Agent-originated changes are tested for duplicate speech before any suppression policy is adopted.
 
-기대:
+All submitted product UI strings are English. Architecture documentation may remain internal, but anything included in the submission must be English or accompanied by the official-rule-required English translation.
 
-```text
-a11y.compare({
-  refs: ["4-14C", "4-12A"]
-})
-```
+## 18. Rail/hotel portability and standards mapping
 
-### EVAL-04 상태 복구
+Hotel is documentation/schema proof only. The MVP contains no hotel adapter, hotel UI, multilevel algorithm, or hotel fixture. The portability proof has four required elements.
 
-사용자:
+### 18.1 Domain-independent contract proof
 
-```text
-내가 지금 뭐 골랐지?
-```
+All nine §10 names, inputs, results, errors, state rules, and annotations are domain-independent. The `Candidate` discriminator makes domain-specific facts explicit while preserving shared refs, line, USD price, availability, features, optional distance, and comparison axes.
 
-기대:
+### 18.2 Rail-to-hotel mapping
 
-```text
-a11y.get_selection()
-```
+| Contract concept | Rail MVP | Hotel proof |
+| --- | --- | --- |
+| stable `ref` | `6-12A` | `812` |
+| coordinate origin | rail-car origin, meters | floor origin, meters |
+| landmarks | `entrance_front`, `restroom`, `cafe_car`, `luggage_rack` | `elevator`, `stairs`, `ice_machine`, `lobby`, `relief_area` |
+| candidate discriminator | `domain: "rail"`, row/seat/side/facing | `domain: "hotel"`, floor/optional bed-to-bathroom distance |
+| accessibility facts | wheelchair space, transfer/companion seat, movable armrest, foot space, bulkhead, exit row | structured room/door/bathroom/lift facts required for independent judgment |
+| pathway modes | `walkway`, `door`, `vestibule` | `walkway`, `door`, `elevator` |
+| relational questions | seat→restroom, seat→entrance | room→elevator, room→lobby, building→relief area |
+| price | seat price in USD | room rate in USD |
 
-화면을 추측하거나 이전 대화를 근거로 답하지 않고 Tool state를 확인해야 한다.
+This table proves contract portability, not implementation readiness. Multilevel hotel routing would require a separately designed algorithm even though the type can represent an elevator segment.
 
-### EVAL-05 확정 통제
+### 18.3 GTFS Pathways and OSDM mapping
 
-사용자:
+**Official/spec erratum:** Bearing is **GTFS-Pathways-aligned**, not a literal `pathways.txt` producer, wire-compatible extension, or claim that GTFS models passenger-vehicle interiors. PRD wording that the route uses GTFS names “as-is” is corrected as follows.
 
-```text
-확정해줘
-```
+| Bearing field/value | GTFS Pathways source | Classification |
+| --- | --- | --- |
+| `length_m` | `length` (meters) | unit-explicit Bearing name with GTFS semantics |
+| `traversal_time_s` | `traversal_time` (seconds) | unit-explicit Bearing name with GTFS semantics |
+| `min_width_m` | `min_width` (meters) | unit-explicit Bearing name with GTFS semantics |
+| `stair_count` | `stair_count` | same name and directional-count semantics |
+| `max_slope` | `max_slope` | same ratio semantics; optional because the single-level fixture generates no slope |
+| `signpostedAs` | `signposted_as` | camel-case Bearing name preserving literal sign text semantics |
+| `pathway_mode: "walkway"` | `pathway_mode=1` | human-readable Bearing representation of GTFS mode |
+| `pathway_mode: "stairs"` | `pathway_mode=2` | human-readable Bearing representation of GTFS mode |
+| `pathway_mode: "elevator"` | `pathway_mode=5` | human-readable representation; type portability only in MVP |
+| `pathway_mode: "door"` | no GTFS Pathways value | Bearing extension |
+| `pathway_mode: "vestibule"` | no GTFS Pathways value | Bearing extension |
 
-기대:
+`from`, `requestedTo`, `to`, `bearing`, `countedFeatures`, `landmarksPassed`, `landmarks`, `rendered`, `requiresContinuation`, `checkpoint`, and aggregate totals are Bearing fields, not GTFS wire fields. `walkSpeedPercent` and `additionalTransferTime_s` are OSDM-aligned effort/connection semantics: only `walkSpeedPercent` changes per-segment rail walking time; `additionalTransferTime_s` remains an optional portability fact and is not silently applied.
 
-```text
-a11y.confirm()
-```
+### 18.4 28 CFR 36.302(e) prose-to-structure mapping
 
-검증:
+| Prose obligation/concept | Bearing representation |
+| --- | --- |
+| identify and describe accessibility features | discriminated `Candidate.accessibility` and full `Description.attributes` |
+| enough detail for independent assessment | individual facts and measurements, not one `accessible` boolean |
+| route from accessible entrance to check-in/essential services/room | stable refs, `Route`, `RouteSegment[]`, and structured landmarks |
+| disclose measured constraints such as clear door width | unit-explicit `min_width_m` or an explicitly named room attribute |
+| identify features that do not meet a person’s need | explicit values retained in results; unsupported filters rejected rather than implied |
 
-- Agent 호출만으로 confirmed가 되지 않음
-- 사용자 확인 UI 노출
-- 최종 confirmed/cancelled 상태가 Agent에 관찰됨
+This mapping is a prototype data-model interpretation, not legal advice or a certification of ADA compliance.
 
----
+### 18.5 Bounded standards-gap statement
 
-## 21. Testing Architecture
+Among the major standards reviewed, GTFS Pathways models station circulation but not passenger-vehicle interiors; ITU-T F.921 addresses route guidance while traveling rather than interrogable pre-selection; 28 CFR 36.302(e) requires detailed hotel accessibility information without defining this machine schema; and 14 CFR 382.41 requires requested seat-level information without creating a dataset. This is a bounded research claim, not an exhaustive standards search.
 
-### 21.1 Domain Unit Test
+## 19. Error contract
 
-#### Route
+The only expected domain error codes are the nine values in §11.
 
-§7.4 6개 케이스.
+| Code | Use |
+| --- | --- |
+| `INVALID_REF` | a required ref does not exist in the loaded layout |
+| `NO_ROUTE` | both refs are valid but no modeled path exists |
+| `NO_MATCH` | a singular-match use case has no result; ordinary empty query is success |
+| `NOT_AVAILABLE` | `select` targets an unavailable seat; compare may still include it |
+| `INVALID_SELECTION` | compare cardinality/uniqueness or another selection invariant fails |
+| `INVALID_CRITERIA` | criteria are internally invalid, such as distance without `near` |
+| `UNSUPPORTED_CRITERIA` | a valid block is inapplicable to the current domain |
+| `NOTHING_TO_UNDO` | undo history is empty |
+| `CONFIRMATION_REQUIRED` | a mutation is locked by pending/completed confirmation or confirm preconditions fail |
 
-#### Query
+Error messages are concise, safe to read aloud, and actionable without exposing stack traces. Unknown fields are schema failures mapped to `INVALID_CRITERIA`. Capability states are §15 bootstrap diagnostics, never domain errors. Unexpected exceptions and cancellation reject; the Adapter preserves their distinction from expected failures.
 
-- near
-- maxSteps
-- priceMax
-- train 조건
-- availableOnly
-- Q1/Q2/Q3 violation
-- appliedCriteria
+The Bridge maps validation failures to fixed, localized message templates; it does not concatenate raw argument values into error text. Logging and rendering follow the safe text-sink contract in §15, including for failed calls.
 
-#### Compare
+## 20. Bridge and Agent contract evaluations
 
-2~3개 후보에 동일 비교축.
+Agent evaluation is distinct from deterministic contract tests.
 
-### 21.2 Application State Test
+### EVAL-01 — layout and constrained search
 
-```text
-select
-→ selection update
-→ history 생성
-→ highlight update
+Prompt: “In Car 6, find an available forward-facing window seat near the front entrance with at least 280 square inches of foot space.”
 
-undo
-→ snapshot restore
+Expected sequence: layout inspection when needed, then query with `near`, `availableOnly`, `needs.minFootSpace_in2`, `rail.facing`, and `rail.side`. Verify normalized criteria, deterministic order, stable refs, truthful count, and no invented relaxation.
 
-confirm pending
-→ select / undo 차단
+### EVAL-02 — conversational reference and route
 
-cancel
-→ draft
+Given ordered refs `6-12A`, `6-14D`, prompt: “How do I get from the second one to the restroom?” The Agent resolves “second” to `6-14D` and requests that route. Bearing does not parse the phrase. Verify lateral movement, meter facts, landmarks, and any checkpoint continuation.
 
-confirm
-→ confirmed
-```
+### EVAL-03 — description and comparison
 
-### 21.3 Bridge Contract Test
+Prompt: “Describe 12A, then compare it with 14D.” Verify structured relations/follow-ups and exactly the two refs in input order on identical axes, even if one is unavailable.
 
-Domain stub을 두고 Bridge만 검증한다.
+### EVAL-04 — state recovery
 
-```text
-Domain returns 20 candidates
-→ Bridge returns 5 + more=15
-```
+Prompt: “What did I select? Undo my last selection.” The Agent inspects current state rather than relying on chat memory. Verify complete state after both calls and derived totals.
 
-```text
-Domain error INVALID_CRITERIA
-→ ToolResult ok:false
-```
+### EVAL-05 — confirmation control
 
-```text
-select success
-→ state가 항상 포함
-```
+Prompt: “Confirm my selection.” Verify that the call stays pending for the accessible human dialog and returns a terminal outcome in that same call; Agent action alone never produces `confirmed`.
 
-```text
-query
-→ appliedCriteria 보존
-```
+Each eval records chosen tool, exact arguments, result refs, omitted or invented criteria, autonomous actions, and user-visible state. Repeated runs must not depend on unstable fixture iteration order.
 
-Bridge가 DOM이나 WebMCP API 없이 테스트 가능해야 한다.
+## 21. Verification architecture
 
-### 21.4 WebMCP Adapter Test
+### 21.1 Domain and contract tests
 
-- 9개 tool 등록
-- tool name `a11y.*`
-- input schema parsing
-- readOnlyHint
-- registration AbortController
-- `ToolResult` 직접 반환
-- capability guard
-- Chrome per-call cancellation compatibility
+- Route: all eight exact §7 acceptance cases, segment-sum totals, finite values, no zero-distance remnants, and continuation invariants.
+- Query: 0, 12, and 13+ matches; repeated deterministic order; full ties resolved by `ref`; truthful `totalMatched`; normalized defaults; narrow/relax hint priorities; and absence of pagination fields.
+- Compare: 1/2/4/5 refs, duplicates, invalid refs, unavailable refs included, input-order preservation, and identical axis keys.
+- Rendering: all units/direction styles, step warning, render-only changes, and positive finite render inputs.
+- Landmark: every category/channel/detectability enum and stable-ref relation.
+- Serialization: every successful and failed result round-trips through JSON without field loss.
 
-### 21.5 Agent Tool-selection Eval
+### 21.2 Application and state tests
 
-§20의 prompt set을 WebMCP inspector / 실제 Browser Agent에서 반복 실행한다.
+- Every use case produces the §8 log/highlight/route effects atomically.
+- `selectedCount` and `priceTotal_usd` always re-derive from `selected`.
+- Select pushes exactly one complete snapshot; failure pushes none.
+- Undo success/failure/lock restores state coherently.
+- Preferences use session defaults and per-call override precedence.
+- Query log stores requested args plus normalized `appliedCriteria`.
 
-검증 축:
+### 21.3 Confirmation tests
 
-- 올바른 Tool 선택
-- parameter extraction
-- 불필요한 autonomous action 여부
-- ref 보존
-- query → route → compare 흐름
-- confirm 전 human gate
+Exercise confirm, cancel, 120-second timeout, per-call abort, document teardown, dialog failure, duplicate call, selection/undo lock, racing terminal events, late callbacks, focus restoration, state restoration, and full same-call result. Run the integration suite in both target runtimes; inability to sustain the contract is an evidence-backed blocker, not permission for a silent fallback.
 
-### 21.6 Accessibility E2E
+### 21.4 WebMCP Adapter tests
 
-- keyboard-only seat navigation
-- screen reader label
-- StatusAnnouncer
-- Agent를 통한 query → route → compare → select → confirm
-- Agent가 confirm을 호출했을 때 ConfirmationDialog로 키보드/스크린리더 focus 접근 가능
-- confirm/cancel 후 focus 및 상태가 정상 복원
-- Agent 응답과 StatusAnnouncer 사이에 과도한 중복 음성이 없는지 확인
-- 모니터를 끈 상태에서 confirmation까지 완료
-- 모든 결과가 음성으로 지나치게 길지 않은지 확인
+- Register exactly nine tools with exact names, schemas, and §16 annotations.
+- Keep registration and execution signals distinct.
+- Diagnose unsupported, insecure, permission denial, security rejection, and other registration failure separately.
+- Return the plain `ToolResult` shape and verify exact JSON round-trip.
+- Abort registration lifecycle without changing domain state.
+- Verify Secure Context and Permissions Policy assumptions in the deployed environment.
 
----
+### 21.5 Accessibility and progressive-enhancement tests
 
-## 22. 프로젝트 구조
+- Complete the whole UI6 journey with WebMCP disabled, keyboard only, and screen reader.
+- Inspect the accessibility tree for a named grid with row/gridcell ownership, one roving tab stop, correct `aria-selected`, cell names/descriptions, arrow/Home/End navigation, Tab escape, focus visibility, and live status.
+- Verify SVG overlay/state without requiring vision to understand the route.
+- Open confirmation from Agent and human controls; inspect its accessible name/modal state and test outside-content `inert`, focus entry/trap, Escape, terminal action, `inert` removal, and restoration.
+- Send markup-, script-, URL-, CSS-, and ARIA-ID-shaped values through args, refs, fixture labels/sign text, logs, status messages, and errors; assert text-only rendering and no DOM or accessibility-tree injection.
+- Complete a monitor-off engineering walkthrough through confirmation.
+- Check Agent speech and live-region speech for harmful duplication.
+
+These are engineering tests, not participant research. Direct blind-user validation has not occurred.
+
+### 21.6 Structural/document checks
+
+- Exactly §§1–27 in order plus this unnumbered preamble.
+- Exact field/enum/table comparison, not token presence alone.
+- No placeholders, empty sections, broken fences/tables, malformed links, or trailing whitespace.
+- Context-aware stale-token and contradiction scans described in the synchronization design.
+- `git diff --check` and complete diff review before handoff.
+
+## 22. Project structure
 
 ```text
 src/
 ├─ app/
-│   ├─ App.tsx
-│   └─ bootstrap.ts
-│
+│  ├─ bootstrap.ts
+│  └─ app.ts
 ├─ domain/
-│   ├─ spatial/
-│   │   ├─ types.ts
-│   │   ├─ calibration.ts
-│   │   ├─ route-engine.ts
-│   │   ├─ query-engine.ts
-│   │   └─ comparison-engine.ts
-│   ├─ train/
-│   │   ├─ train-domain.ts
-│   │   └─ train-types.ts
-│   └─ hotel/
-│       ├─ hotel-domain.ts
-│       └─ hotel-types.ts
-│
+│  ├─ spatial/
+│  │  ├─ types.ts
+│  │  ├─ route-engine.ts
+│  │  ├─ query-engine.ts
+│  │  ├─ comparison-engine.ts
+│  │  └─ rendering.ts
+│  └─ rail/
+│     ├─ rail-domain.ts
+│     └─ rail-types.ts
 ├─ application/
-│   ├─ get-layout.ts
-│   ├─ query.ts
-│   ├─ describe.ts
-│   ├─ get-route.ts
-│   ├─ compare.ts
-│   ├─ select.ts
-│   ├─ get-selection.ts
-│   ├─ undo.ts
-│   └─ confirm.ts
-│
+│  ├─ use-cases.ts
+│  ├─ confirmation-coordinator.ts
+│  └─ errors.ts
 ├─ bridge/
-│   ├─ tool-catalog.ts
-│   ├─ contracts.ts
-│   ├─ response-presenter.ts
-│   ├─ state-projector.ts
-│   ├─ error-mapper.ts
-│   └─ handlers/          # MVP에서는 handlers.ts 하나로 합쳐도 됨
-│
-├─ adapters/
-│   └─ webmcp/
-│       ├─ model-context.ts
-│       ├─ register-tools.ts
-│       ├─ execution-context.ts
-│       ├─ capability.ts
-│       └─ schemas/
-│
+│  ├─ contracts.ts
+│  ├─ schemas.ts
+│  ├─ handlers.ts
+│  ├─ presenter.ts
+│  └─ state-projector.ts
+├─ adapters/webmcp/
+│  ├─ register-tools.ts
+│  ├─ capability.ts
+│  └─ lifecycle.ts
 ├─ state/
-│   ├─ app-store.ts
-│   ├─ commands.ts
-│   └─ selectors.ts
-│
+│  ├─ app-store.ts
+│  └─ selectors.ts
 ├─ ui/
-│   ├─ layout/
-│   ├─ overlay/
-│   ├─ panels/
-│   ├─ confirmation/
-│   ├─ accessibility/
-│   └─ capability/
-│
+│  ├─ rail-seat-grid.ts
+│  ├─ controls.ts
+│  ├─ route-overlay.ts
+│  ├─ panels.ts
+│  ├─ confirmation-dialog.ts
+│  └─ capability-banner.ts
 ├─ data/
-│   ├─ train-4.json
-│   └─ hotel.json
-│
+│  └─ intercity-car-6.json
 └─ tests/
-    ├─ domain/
-    ├─ application/
-    ├─ bridge/
-    ├─ webmcp/
-    ├─ agent-evals/
-    └─ accessibility/
+   ├─ domain/
+   ├─ application/
+   ├─ bridge/
+   ├─ webmcp/
+   ├─ agent-evals/
+   └─ accessibility/
 ```
 
-> **MVP 구현 메모:** Bridge는 논리적 architecture boundary다. 9개 handler를 반드시 9개 파일로 나눌 필요는 없다. `contracts.ts + presenter.ts + handlers.ts` 정도로 시작하고 파일이 커질 때만 분리한다.
+The Bridge is a logical boundary, not a mandate for one file per tool. Hotel proof belongs in specification documentation, not an unused runtime adapter.
 
----
+## 23. Implementation dependency order
 
-## 23. 구현 순서
+This is dependency order, not a schedule or cut list. Each gate must retain the complete product contract.
 
-### Phase 1 — Spatial Truth
+1. **Spatial truth:** independently authored fixture, meter coordinates, seats, landmarks, refs, and validation.
+2. **Pure Domain:** query/order/hints, compare, route/continuation, rendering, and all unit tests.
+3. **Application/state:** nine use cases, selection selectors, history, confirmation coordinator, log/highlight/route effects.
+4. **Bridge:** exact inputs/results/errors and contract tests without WebMCP or DOM.
+5. **WebMCP Adapter:** nine registrations, capability/lifecycle/cancellation, annotations, serialization tests.
+6. **Accessible Human UI:** UI1–UI8 and the full non-Agent journey.
+7. **Target-runtime/evidence validation:** Chrome and ChatGPT in-app browser, accessibility engineering tests, public deployment, and submission evidence.
 
-```text
-Train fixture
-→ Spatial types
-→ STEP_CALIBRATION
-→ Route Engine (same-row direct / cross-row aisle)
-→ 6 Route tests
-```
-
-완료 기준:
-
-> UI·WebMCP·Agent 없이 공간 경로가 정확하다.
-
-### Phase 2 — Domain Use Cases
-
-```text
-query
-describe
-compare
-select
-getSelection
-undo
-confirm state
-```
-
-완료 기준:
-
-> Application API만으로 메인 좌석 선택 흐름을 실행할 수 있다.
-
-### Phase 3 — Spatial Accessibility Bridge
-
-```text
-a11y.* contracts
-→ structured Agent DTO + response shaping
-→ state projection
-→ error mapping
-→ Bridge contract tests
-```
-
-완료 기준:
-
-> WebMCP 없이 Bridge handler를 직접 호출해 9개 contract가 검증된다.
-
-### Phase 4 — WebMCP Adapter
-
-```text
-document.modelContext
-→ 9 tools register
-→ annotations
-→ capability
-→ lifecycle
-→ execution compatibility
-```
-
-완료 기준:
-
-> WebMCP-enabled Chrome에서 9개 Tool을 수동 호출할 수 있다.
-
-### Phase 5 — UI
-
-```text
-SeatMap
-→ highlight
-→ RouteOverlay
-→ SelectionPanel
-→ StatusAnnouncer
-→ ConfirmationDialog
-```
-
-### Phase 6 — Agent Eval / Blind Flow
-
-```text
-natural language
-→ Agent tool selection
-→ Bridge
-→ state
-→ human confirmation
-```
-
-§20 시나리오 통과.
-
-### Phase 7 — Hotel Contract Proof 또는 E3
-
-Hotel 구현을 추가할 때:
-
-```text
-수정 허용:
-data/
-domain/hotel/
-ui/layout/
-
-수정이 최소여야 함:
-bridge/
-application/
-adapters/webmcp/
-```
-
-Bridge contract나 WebMCP tool을 대폭 고쳐야 하면 abstraction이 잘못된 신호다.
-
----
+Hotel remains a specification proof throughout these gates. Adding a runtime hotel domain is a future separately scoped change.
 
 ## 24. Architecture Decision Records
 
-**ADR-001 — Domain Core는 Agent/WebMCP/React를 모른다.**  
-공간 사실은 deterministic하게 계산한다.
+**ADR-001 — Domain Core is pure TypeScript.** Spatial truth must be deterministic and testable without DOM/WebMCP.
 
-**ADR-002 — Wayfinder는 내부 AI Agent가 아니라 Spatial Accessibility Bridge다.**  
-자연어 해석과 orchestration은 외부 Browser Agent가 담당한다.
+**ADR-002 — Bearing is a Bridge, not an internal Agent.** Natural-language planning stays external.
 
-**ADR-003 — `a11y.*`는 public accessibility contract다.**  
-DOM 구조나 UI 컴포넌트 이름을 노출하지 않는다.
+**ADR-003 — `a11y.*` is a public accessibility contract.** Stable refs and semantic facts replace DOM/component details.
 
-**ADR-004 — WebMCP Adapter와 Accessibility Bridge를 구분한다.**  
-Adapter는 플랫폼 binding, Bridge는 접근성 의미 계약을 담당한다.
+**ADR-004 — Bridge and WebMCP Adapter are separate boundaries.** Meaning/validation are not platform binding.
 
-**ADR-005 — Route는 structured spatial truth다.**  
-Agent 설명·UI overlay·test가 동일 `Route.segments`에서 파생된다.
+**ADR-005 — UI and tools share one authored spatial source and App Store.** Neither calls or scrapes the other.
 
-**ADR-006 — Voice bandwidth는 Bridge의 책임이다.**  
-리스트 최대 5, `more`, `hint`, concise line을 적용한다.
+**ADR-006 — Route segments are source truth; rendering and SVG are derived.** Unit/direction preferences never alter geometry.
 
-**ADR-007 — 상태는 화면과 Agent 양쪽에 동일하게 투영한다.**  
-조작 Tool은 전체 SelectionState를 반환한다.
+**ADR-007 — Distances are authored in meters; step counts are approximate output only.** Every step rendering carries `unitsNote`.
 
-**ADR-008 — 지원하지 않는 조건을 silent-ignore하지 않는다.**  
-잘못 적용된 조건으로 사용자가 판단하지 않게 한다.
+**ADR-008 — List breadth and route sequence have separate limits.** Query returns up to 12 without pagination; compare returns exact 2–4; each route leg returns at most four segments.
 
-**ADR-009 — 최종 확정은 사람만 할 수 있다.**  
-blocking/pending은 구현 전략이며 human confirmation은 불변 조건이다.
+**ADR-009 — Query order and hints are deterministic.** Stable refs and explicit `totalMatched` prevent conversational-reference drift.
 
-**ADR-010 — WebMCP API 변화는 Adapter에 격리한다.**  
-현재 Draft의 execution `signal`을 사용하되 구현체 버전 차이가 Domain/Application/Bridge contract에 전파되지 않게 한다.
+**ADR-010 — Unsupported criteria are rejected, not ignored.** The Agent cannot claim a filter was applied when it was not.
 
-**ADR-011 — Tool 결과는 WebMCP execute의 JSON-serializable value로 직접 반환한다.**  
-MCP server용 `{content,isError}` envelope에 종속되지 않는다. 현재 WebMCP에 `outputSchema`가 없으므로 TS/contract test로 출력 계약을 보증한다.
+**ADR-011 — Candidate is domain-discriminated; comparison uses keyed axes.** No bare domain block or index-coupled values.
 
-**ADR-012 — Agent 품질은 별도 eval로 검증한다.**  
-Domain unit test와 Agent tool-selection correctness는 다른 문제다.
+**ADR-012 — All decision totals are derived.** Selection refs are the only writable source for count and USD total.
 
-**ADR-013 — UI와 Agent는 하나의 structured spatial truth를 공유한다.**  
-Bridge가 화면을 OCR/DOM scraping해 의미를 추론하지 않는다. 같은 fixture/model에서 Human UI와 Agent DTO를 각각 projection한다.
+**ADR-013 — Final confirmation is human-only and same-call.** No polling fallback or Agent-only terminal action.
 
-**ADR-014 — Domain은 fact를, Bridge는 presentation을 만든다.**  
-Query candidate의 구조화 속성은 Domain이 계산하고 concise `line`, `more`, `hint`는 Bridge Presenter가 만든다.
+**ADR-014 — Undo is one-step snapshot restoration.** It restores selection, highlights, status, and route atomically.
 
-**ADR-015 — 같은 row와 다른 row의 이동 규칙을 구분한다.**  
-같은 row는 직접 횡이동, 다른 row는 aisle 경유로 계산하여 aisle 강제 우회에 의한 과대 계산을 막는다.
+**ADR-015 — Every tool annotation is truthful about visible/log state.** All nine use `readOnlyHint: false` in v0.3.2.
 
----
+**ADR-016 — WebMCP outputs are plain JSON-serializable values.** Server-style envelopes and non-JSON graphs are excluded.
 
-## 25. 의도적으로 하지 않을 것
+**ADR-017 — WebMCP evolution is isolated in the Adapter.** Registration signal, execution signal, and host capability remain distinct.
 
-- Wayfinder 내부 LLM
-- generic `a11y.ask`
-- 자동 좌석 추천/랭킹 Agent
-- 사용자를 대신한 autonomous confirm
-- DOM scraping
-- vision 기반 좌석 구조 추정
-- 서버 / DB / 인증 / 실제 결제
-- 범용 graph/pathfinding
-- 범용 geometry engine
-- 과도한 event sourcing
-- iframe / cross-origin tool exposure
-- 다중 호차 / 다층 이동
-- 로케일 다국어화
+**ADR-018 — GTFS semantics are aligned, not claimed wire-compatible.** Unit-explicit names and Bearing extensions are labeled.
 
----
+**ADR-019 — Rail is the sole runtime MVP domain.** Hotel demonstrates schema portability only.
 
-## 26. Bridge 성공 기준
+**ADR-020 — Agent quality, accessibility behavior, and Domain correctness are separate evidence layers.** Passing one does not imply the others.
 
-Wayfinder가 Spatial Accessibility Bridge 역할을 충분히 수행했다고 판단하려면 아래를 모두 만족해야 한다.
+## 25. Non-goals, limitations, risks, and open questions
 
-### 공간 의미
+### 25.1 Non-goals
 
-- [ ] 사용자가 화면을 보지 않고 전체 layout의 주요 기준점을 알 수 있다.
-- [ ] 좌석→출입문/화장실 경로를 구조화된 Route로 얻을 수 있다.
-- [ ] 후보 간 공간적 차이를 비교할 수 있다.
+- Actual booking, payment, accounts, login, or multi-user state.
+- Scraping, browser extensions, copied operator UI/layouts, OCR, or visual inference.
+- An internal LLM, generic `a11y.ask`, autonomous recommendation, or autonomous confirmation.
+- Generic geometry/pathfinding, multilevel travel, or multiple rail cars.
+- Full locale separation or an implemented hotel domain.
+- Authored step counts or claims that an approximate stride is measured fact.
+- Real operator integration or certified operational routing.
 
-### Agent contract
+### 25.2 Disclosed limitations
 
-- [ ] Agent가 DOM을 추측하지 않고 `a11y.*`만으로 핵심 시나리오를 수행한다.
-- [ ] query 결과는 5개 이하이고 `more`/`hint`가 있다.
-- [ ] candidate는 `line`뿐 아니라 가격/거리/방향/side 등 구조화 fact를 제공한다.
-- [ ] 모든 대상에 stable ref가 있다.
-- [ ] 모든 ToolResult에 현재 `domain`/`layoutId` context가 있다.
-- [ ] 실제 적용 query 조건이 **기본값까지 normalize되어** 반환된다.
-- [ ] 조작 후 state가 반환된다.
+- One unbranded synthetic single-level rail car; no real reservation inventory.
+- Step values are estimates derived from measured meter geometry.
+- Hotel is schema/documentation proof only.
+- Direct blind-user validation has not occurred. Keyboard, screen-reader, monitor-off, and synthetic-fixture checks are engineering verification, not participant research.
+- Bearing is an accessibility prototype informed by cited sources, not certified legal, regulatory, WCAG, safety, routing, or real-world operational compliance.
 
-### 사용자 통제
+### 25.3 Evidence-dependent risks/open questions
 
-- [ ] 현재 선택을 언제든 다시 확인할 수 있다.
-- [ ] undo가 가능하다.
-- [ ] Agent 단독으로 confirmed가 될 수 없다.
-- [ ] 사용자 확인 이후 최종 상태를 Agent가 관찰할 수 있다.
+| Question/risk | Required evidence or response |
+| --- | --- |
+| Do both target runtimes discover and invoke all exact names/schemas? | Real calls in ChatGPT in-app browser and Chrome 149+; record failures without name fallback |
+| Can both hosts sustain a 120-second same-call confirmation with focus-safe page interaction? | Integration tests for confirm/cancel/timeout/abort/duplicate and focus/state restoration; unresolved failure is a blocker |
+| Do tool-triggered highlights/log/live regions create duplicate or confusing speech? | Screen-reader evaluation with Agent- and human-originated events |
+| Does the synthetic route model match every claimed path? | Eight exact route tests and fixture provenance; do not generalize beyond modeled geometry |
+| Has any third-party IP or unlicensed asset entered data/UI/video? | Dependency/asset provenance ledger and manual repository/demo review |
+| Are all submitted materials accessible and English? | Live URL audit and English review/translation of video, description, instructions, README, and UI |
 
-### 접근성
+## 26. PRD traceability and acceptance evidence
 
-- [ ] WebMCP가 없어도 keyboard/ARIA UI가 동작한다.
-- [ ] screen reader 사용 시 상태 변화가 concise하게 전달된다.
-- [ ] Agent 호출로 열린 ConfirmationDialog에 키보드/스크린리더 focus로 접근할 수 있다.
-- [ ] Agent 응답과 StatusAnnouncer가 같은 내용을 과도하게 중복해서 읽지 않는다.
-- [ ] Tool log 때문에 불필요한 음성 출력이 발생하지 않는다.
-- [ ] 모니터 없이 query → route → compare → select → confirm 흐름을 완료할 수 있다.
+Each row has exactly one disposition: **Preserved**, **Official/spec erratum**, or **Intentionally non-architectural**.
 
-### Agent 품질
+### 26.1 Goals and non-goals
 
-- [ ] `"두 번째 거"`를 직전 결과의 stable ref로 올바르게 연결한다.
-- [ ] `"지금 뭐 골랐지?"`에 대화 기억이 아니라 `get_selection`을 사용한다.
-- [ ] `"확정"` 요청에 human confirmation gate를 거친다.
-- [ ] Agent가 사용자를 대신해 임의의 최종 선택을 하지 않는다.
+| PRD source | Architecture target | Verification evidence | Disposition |
+| --- | --- | --- | --- |
+| §3.1 G1 | §§2, 10 | Nine exact schemas and journey eval | Preserved |
+| §3.1 G2 | §§7, 18 | Structured route tests and GTFS mapping | Preserved |
+| §3.1 G3 | §§5, 9, 20 | refs, relations, follow-ups, evals | Preserved |
+| §3.1 G4 | §§5, 18 | five landmark categories/channels | Preserved |
+| §3.1 G5 | §§10, 18 | nine contracts plus portability proof | Preserved |
+| §3.2 booking/payment | §§3, 25 | no server/payment boundary | Preserved |
+| §3.2 login/account/multi-user | §§3, 25 | browser-local state; no auth | Preserved |
+| §3.2 scraping/browser extension | §§1, 4, 25 | authored-data boundary | Preserved |
+| §3.2 other accessibility areas | §§4, 25 | claim limited to nonvisual spatial decisions; compound attributes are facts, not broader claim | Preserved |
+| §3.2 generic pathfinding/geometry | §§4, 7, 25 | bounded aisle-aware algorithm | Preserved |
+| §3.2 multilevel/multi-car | §§3, 18, 25 | types portable; runtime excluded | Preserved |
+| §3.2 full locale separation | §§17, 25 | English submission/UI contract | Preserved |
+| §3.2 hotel implementation | §§18, 22, 25 | documentation proof only | Preserved |
 
----
+### 26.2 Standards, principles, scope, and contracts
 
-## 27. 최종 권장 구조
+| PRD source | Architecture target | Verification evidence | Disposition |
+| --- | --- | --- | --- |
+| §4.1 standards gap | §18.5 | bounded four-source statement | Preserved |
+| §4.2 GTFS/OSDM relationship | §§7, 18.3 | official mapping table and semantics | Official/spec erratum |
+| §5 P1 | §§5, 9, 20 | stable refs, facts, relations, follow-ups | Preserved |
+| §5 P2 | §§6, 7, 10 | query ≤12, compare 2–4, route ≤4 | Preserved |
+| §5 P3 | §§11–14 | full state and exact undo | Preserved |
+| §5 P4 | §13 | human-only same-call terminal event | Preserved |
+| §5 P5 | §§8, 17 | highlights, overlay, log, panels | Preserved |
+| §5 P6 | §§6–7 | meter/bearing source, derived rendering | Preserved |
+| §5 P7 | §§6–7 | no authored steps; warning and landmark counts | Preserved |
+| §6 M1 | §§3, 5, 22 | `intercity-car-6.json`, synthetic rail contract | Preserved |
+| §6 M2 | §§7, 21 | eight route cases (seven PRD cases plus continuation closure) | Preserved |
+| §6 M3 | §§10, 15–16 | nine exact registrations and runtime tests | Preserved |
+| §6 M4 | §17 | UI1–UI8 acceptance table | Preserved |
+| §6 M5 | §§15, 26.4 | HTTPS unauthenticated live URL evidence | Preserved |
+| §6 M6 | §26.4 | live URL, four-part description, video, public repo/license | Preserved |
+| §6 E1 | §§10, 18 | nine schemas and four-part portability proof | Preserved |
+| §6 E2 | §§10, 12 | no tenth tool; prefs/session/render options | Preserved |
+| §6 E3 | §§18, 25 | hotel runtime out; mapping retained | Preserved |
+| §7.1 annotation matrix | §16 | all calls mutate visible/log state | Official/spec erratum |
+| §§7.2–7.7 tool/result/error/confirm | §§10–16, 19 | exact schemas, results, state, errors, same-call confirmation | Preserved |
+| §§8.1–8.6 data models | §§5–6, 12 | exact type-field comparison | Preserved |
+| §§9.1–9.6 route model/algorithm/tests | §§7, 18.3, 21 | segment/total/render/continuation invariants | Preserved |
+
+### 26.3 UI, architecture, portability, judging, and operations
+
+| PRD source | Architecture target | Verification evidence | Disposition |
+| --- | --- | --- | --- |
+| §10 UI1 | §17 | CSS Grid fixture projection test | Preserved |
+| §10 UI2 | §§8, 17 | result-ref highlight test | Preserved |
+| §10 UI3 | §§7, 17 | segment-derived SVG test | Preserved |
+| §10 UI4 | §§8, 12, 17 | args + applied criteria log test | Preserved |
+| §10 UI5 | §§11–12, 17 | persistent refs/USD/status selectors | Preserved |
+| §10 UI6 | §17 | complete non-Agent controls and keyboard/ARIA journey | Preserved |
+| §10 UI7 | §§13, 17 | focus-safe human dialog tests | Preserved |
+| §10 UI8 | §§15, 17 | capability banner plus working UI | Preserved |
+| §11 architecture and ADRs | §§3–4, 8–9, 24 | dependency review and ADR set | Preserved |
+| §12 portability proof | §18 | nine schemas, hotel mapping, GTFS junction, CFR mapping | Preserved |
+| §13.0 Stage One | §§2, 26.4 | genuine working WebMCP and theme fit evidence | Preserved |
+| §13.1 WebMCP Leverage | §§10, 13, 15–16, 26.4 | complete non-trivial journey and runtime evidence | Preserved |
+| §13.2 Execution | §§17, 20–21, 26.4 | coherent Agent and no-Agent workflows | Preserved |
+| §13.3 Potential Impact | §§1–2, 18, 25 | bounded sources/limitations and concrete gap | Preserved |
+| §13.4 Creativity & Ambition | §§7, 18, 26.4 | structured vehicle route/O&M/rendering proof | Preserved |
+| §§14.1–14.5 deployment/submission/IP/language | §26.4 | artifact and provenance checklist | Preserved |
+| §15 schedule/order/cut administration | — | deliberately absent; embedded product duties trace through M1–M6/UI1–UI8 | Intentionally non-architectural |
+| §§16.1–16.3 platform/capability/wire | §§15–16, 21 | draft-correct adapter and target-runtime tests | Official/spec erratum |
+| §17 limitations/communication | §§1, 18.5, 25 | bounded prototype language and disclosures | Preserved |
+| §18 risks | §25.3 | non-schedule evidence risks retained | Preserved |
+| §19 open questions | §25.3 | resolved facts removed; host/accessibility questions retained | Preserved |
+| §21 identity | §§1, 22, 24 | Bearing selected throughout | Preserved |
+
+PRD §20 remains the source/bibliography for product claims and is not misclassified as a product contract.
+
+### 26.4 Challenge and submission acceptance evidence
+
+Architecture requires evidence; it does not assert these items are already complete.
+
+- **Stage One:** a genuine working WebMCP implementation and clear human-Agent open-web fit.
+- **Stage Two:** evidence separately addresses the equally weighted WebMCP Leverage, Execution, Potential Impact, and Creativity & Ambition criteria.
+- **Entrant/team eligibility:** each individual records age-of-majority and eligible-country status; an organization records valid formation in an eligible country and representative authority. Team membership and any employer/school obligations are reviewed against the official rules before submission.
+- **Exclusions and conflicts:** retain an attestation that no entrant is an ineligible Promotion Entity employee, agent, immediate-family/household member, judge affiliate, resident of an excluded jurisdiction, or otherwise subject to a stated conflict or prohibition.
+- **Financial or preferential support:** retain an attestation and supporting provenance that the project was not developed or derived using Sponsor or Administrator financial/preferential support—including funding, investment, contract work, or a commercial license—within the official rule's restriction.
+- **Platforms:** testing instructions and recorded calls cover ChatGPT’s in-app browser and Chrome 149+ with WebMCP testing enabled.
+- **Live experience:** accessible HTTPS URL, no account/authentication, free of charge, and unrestricted for judges through judging.
+- **Description:** four explicit parts—WebMCP fit, better UX, newly possible human-Agent collaboration, and implementation approach.
+- **Repository:** public source/assets plus functional/testing instructions; root MIT license detectable in the repository About area.
+- **Video:** public YouTube, under three minutes, clear functioning demo with explanatory audio, complete `query → get_route → compare → select → confirm` journey, unit-rendering proof, hotel mapping proof, English narration/captions, and no background music.
+- **Language:** submission, video, description, testing instructions, README, and product UI are English; any exception includes the rule-required English translation.
+- **Provenance:** disclose whether any work predates the submission period and distinguish dated prior work from meaningful WebMCP work.
+- **IP/assets:** record source, license, and authorization for every dependency, SDK, API, dataset, image, font, audio, and other asset; exclude third-party trademarks and unauthorized material.
+- **Synthetic assets:** `intercity-car-6.json` and before/after mockups are independently authored and unbranded; documented operational facts may inform them, but no third-party diagram, screenshot, artwork, or proprietary dataset is reproduced.
+
+## 27. Final recommended structure and success criteria
 
 ```text
-Screen Reader User
-        ↕
-External Browser Agent
-        ↕ natural language / tool call
-WebMCP Adapter
+Person
+  ↕ natural language                         ↕ keyboard / ARIA
+External Browser Agent                 Accessible Human UI
+        ↓                                      ↓
+WebMCP Adapter                    Application use cases
+        ↓                                      ↑
+Spatial Accessibility Bridge ────────────────┘
         ↓
-Spatial Accessibility Bridge
-        ↓
-Application
-        ↓
-Domain Core
-        ↕
-      App Store
+Domain Core ↔ App Store
         ↑
-    React UI
+independently authored meter-source rail fixture
 ```
 
-이 구조의 핵심은 WebMCP 자체가 아니다.
+The architecture is ready for implementation when all of the following are true:
 
-WebMCP는 Agent와 사이트를 연결하는 transport다.
+- Exactly one public Bearing contract exists for the nine tools, exact types, errors, annotations, and state behavior.
+- Domain/UI/Agent facts derive from the same fixture and App Store.
+- Query 0/12/13+ boundaries, deterministic order/hints, and compare 2–4 semantics pass exact tests.
+- Routes preserve lateral movement, meter totals, bearings, rendering separation, four-segment continuation, and all eight acceptance cases.
+- Selection totals never diverge; undo and same-call human confirmation restore/lock state deterministically.
+- UI1–UI8 support the complete no-Agent journey and WebMCP remains progressive enhancement.
+- Adapter behavior matches the current draft and passes both target-runtime integrations without confusing registration and execution cancellation.
+- GTFS/OSDM/legal mappings are accurately bounded and hotel remains documentation proof.
+- Challenge evidence covers Stage One, all four Stage Two criteria, unauthenticated live access, MIT, English materials, provenance/IP, and a no-background-music public demo.
+- Limitations and unresolved runtime/accessibility questions remain disclosed; no implementation, certification, participant-validation, deployment, or submission claim is made without evidence.
 
-Wayfinder의 차별점은 그 transport 위에 다음을 안정적인 계약으로 제공한다는 데 있다.
-
-```text
-Structured Spatial Model
-          ↙       ↘
-   Visual UI   Deterministic Spatial Domain
-                     ↓
-          Accessible Semantic Contract
-          ↓
-External Agent
-          ↓
-Screen Reader User
-```
-
-> **Wayfinder가 브릿지하는 것은 “Agent와 DOM”이 아니라, “시각 UI와 동일한 공간 사실을 사용하는 접근 가능한 의미 계약과 사용자의 대화 인터페이스”다.**
-
-이 경계를 유지하면 별도의 내부 AI Agent 없이도 시각장애 사용자의 좌석 탐색·경로 이해·비교·상태 확인·최종 통제라는 핵심 문제를 WebMCP로 충분히 해결할 수 있다.
+Bearing bridges a person and the spatial facts already owned by a site. WebMCP is the transport; the durable product is the interrogable, deterministic, human-controlled accessibility contract.
