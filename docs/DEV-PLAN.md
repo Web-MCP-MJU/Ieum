@@ -13,11 +13,11 @@
 | # | 항목 | 상태 |
 | --- | --- | --- |
 | 0-1 | **Devpost 등록 + Join Hackathon** | ⬜ **등록 마감 = 제출 마감 동시각.** 미루면 제출 자체 불가 |
-| 0-2 | **프로젝트명 통일** | ⬜ 현재 3개가 혼재: repo `Ieum` / PRD `Bearing` / Architecture `Wayfinder`. **`Ieum`으로 통일** 권장 — repo·org명이고 상표 충돌 없음 |
+| 0-2 | **프로젝트명 통일** | ✅ **`Ieum`으로 확정.** PRD·Architecture·출력 계약 스키마(`docs/contracts/ieum-output.schema.json`)까지 반영 완료. `RouteSegment.bearing`은 방위각을 뜻하는 공간 용어이므로 필드명으로 유지 |
 | 0-3 | Chrome 149+ 설치, `chrome://flags/#enable-webmcp-testing` 활성화 | ⬜ 없으면 개발 자체가 불가 |
 | 0-4 | ChatGPT 데스크톱 앱 설치 + WebMCP 접근 권한 확인 | ⬜ 계정에 기능이 없으면 Chrome만으로 데모 |
 
-> 0-2를 미루면 코드·문서·영상에 이름이 섞여 나간다. 지금 정한다.
+> 0-2는 정리했다. 남은 항목은 환경 준비라 코드와 무관하게 병행할 수 있다.
 
 ---
 

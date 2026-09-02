@@ -1,4 +1,4 @@
-# Bearing Architecture v0.3.3 — Spatial Accessibility Bridge
+# Ieum Architecture v0.3.3 — Spatial Accessibility Bridge
 
 **Product contract:** `docs/PRD v0.3.md`
 
@@ -6,14 +6,14 @@
 
 **Document role:** implementation-ready architecture and acceptance contract; it does not claim that implementation, runtime integration, accessibility validation, deployment, or submission is complete.
 
-This revision replaces the v0.3.2 public contract. v0.3.3 is a breaking contract revision because `Seat.quietCar` and `Candidate.rail.quietCar` are now required factual fields rather than an untraceable query-only criterion. Bearing is the selected project name; the only implemented MVP domain is `rail`; the independently authored fixture is `site/src/data/intercity-car-6.json`, its unbranded `layoutId` is `Car 6, Business Class`, and all prices are USD. The former numbered revision summary is retained here as an unnumbered preamble so the architecture has exactly §§1–27.
+This revision replaces the v0.3.2 public contract. v0.3.3 is a breaking contract revision because `Seat.quietCar` and `Candidate.rail.quietCar` are now required factual fields rather than an untraceable query-only criterion. Ieum is the selected project name; the only implemented MVP domain is `rail`; the independently authored fixture is `site/src/data/intercity-car-6.json`, its unbranded `layoutId` is `Car 6, Business Class`, and all prices are USD. The former numbered revision summary is retained here as an unnumbered preamble so the architecture has exactly §§1–27.
 
 Authority, in descending order:
 
 1. [Official challenge page](https://webmcp.devpost.com/) and [official rules](https://webmcp.devpost.com/rules) for eligibility, judging, submission, language, provenance, and IP.
 2. [Current WebMCP Draft Community Group Report](https://webmachinelearning.github.io/webmcp/) for WebMCP API facts. It is a Draft Community Group Report, not a W3C Standard or W3C Standards Track document.
 3. [GTFS Schedule Reference](https://gtfs.org/documentation/schedule/reference/) for GTFS Pathways wire names and semantics.
-4. `docs/PRD v0.3.md` for Bearing product intent, scope, user journey, types, and UI.
+4. `docs/PRD v0.3.md` for Ieum product intent, scope, user journey, types, and UI.
 5. The earlier Architecture only for non-conflicting implementation detail.
 
 [Chrome WebMCP documentation](https://developer.chrome.com/docs/ai/webmcp/imperative-api) and [OpenAI Site Tools documentation](https://help.openai.com/en/articles/20001423-using-site-tools-in-the-chatgpt-desktop-app) are target-runtime guidance, subordinate to the draft. Host guidance such as a recommended 1.5K-character individual-output ceiling is optimization guidance, not a normative API limit and not permission to omit required fields.
@@ -24,13 +24,13 @@ Explicit higher-authority corrections in this revision are labeled **Official/sp
 
 ## 1. One-sentence architecture definition
 
-> **Bearing projects one authored, structured spatial model through deterministic Application use cases into both an accessible human UI and nine stable `a11y.*` WebMCP contracts, so a person can interrogate layout, route, comparison, selection, and confirmation facts without relying on visual inference.**
+> **Ieum projects one authored, structured spatial model through deterministic Application use cases into both an accessible human UI and nine stable `a11y.*` WebMCP contracts, so a person can interrogate layout, route, comparison, selection, and confirmation facts without relying on visual inference.**
 
-Bearing is a Spatial Accessibility Bridge, not an AI recommendation agent. It contains no LLM, natural-language parser, autonomous planner, generic recommendation tool, DOM scraper, OCR, or visual inference. The external Browser Agent owns natural-language understanding, tool orchestration, and conversational-reference resolution; Bearing owns deterministic spatial facts, state transitions, accessible human controls, and contract projection.
+Ieum is a Spatial Accessibility Bridge, not an AI recommendation agent. It contains no LLM, natural-language parser, autonomous planner, generic recommendation tool, DOM scraper, OCR, or visual inference. The external Browser Agent owns natural-language understanding, tool orchestration, and conversational-reference resolution; Ieum owns deterministic spatial facts, state transitions, accessible human controls, and contract projection.
 
 “Visual to semantic” means that UI and tools are projections of the same authored data. It never means reconstructing geometry from pixels or the DOM.
 
-Identity claims are bounded: Bearing is the selected project name and, among the major standards reviewed in PRD §4, addresses a gap in interrogable pre-selection spatial information. No exhaustive naming, trademark, standards, safety, or accessibility-certification claim is made.
+Identity claims are bounded: Ieum is the selected project name and, among the major standards reviewed in PRD §4, addresses a gap in interrogable pre-selection spatial information. No exhaustive naming, trademark, standards, safety, or accessibility-certification claim is made.
 
 ## 2. Why the Bridge boundary is sufficient
 
@@ -71,7 +71,7 @@ Tool count alone is not the product value. The value is a coherent, inspectable 
 
 ## 3. Overall architecture
 
-Bearing is a browser-local modular monolith.
+Ieum is a browser-local modular monolith.
 
 ```text
 External Browser Agent
@@ -109,7 +109,7 @@ WebMCP is progressive enhancement. When unavailable, every human task remains po
 - Ask follow-up questions and preserve user agency.
 - Never invent a spatial fact, silently relax a criterion, or claim confirmation without the tool result.
 
-### 4.2 Bearing
+### 4.2 Ieum
 
 - Resolve stable refs against the loaded layout.
 - Validate and normalize criteria and render options.
@@ -122,7 +122,7 @@ WebMCP is progressive enhancement. When unavailable, every human task remains po
 
 ### 4.3 Explicit exclusions
 
-Bearing does not implement actual booking/payment; accounts, login, or multiple users; scraping or a browser extension; an internal LLM; generic pathfinding or geometry; multilevel or multi-car routing; full locale separation; actual hotel UI/adapter/routing; real operator data; a copied real-world layout; authored step counts; or autonomous confirmation. Accessibility attributes can describe compound needs, but the product claim stays scoped to nonvisual spatial decision support.
+Ieum does not implement actual booking/payment; accounts, login, or multiple users; scraping or a browser extension; an internal LLM; generic pathfinding or geometry; multilevel or multi-car routing; full locale separation; actual hotel UI/adapter/routing; real operator data; a copied real-world layout; authored step counts; or autonomous confirmation. Accessibility attributes can describe compound needs, but the product claim stays scoped to nonvisual spatial decision support.
 
 ## 5. Domain Core and complete data contracts
 
@@ -695,7 +695,7 @@ In addition to schema validation, Application enforces finite numbers, consumes 
 
 ### 10.3 Canonical output JSON Schemas
 
-The machine-valid Draft 2020-12 output catalog is [bearing-output.schema.json](./contracts/bearing-output.schema.json). Its nine top-level properties map one-to-one to this section's tool matrix and reference complete success/failure envelopes plus all nested result types. WebMCP currently has no `outputSchema` registration member, so the Adapter does not send this catalog to `registerTool`; Bridge contract tests validate every fulfilled result against the corresponding `$defs/*Output` schema and then verify the cross-field invariants that JSON Schema cannot express (derived totals, query hint conditions, row/axis equality, continuation endpoints, and step-warning presence).
+The machine-valid Draft 2020-12 output catalog is [ieum-output.schema.json](./contracts/ieum-output.schema.json). Its nine top-level properties map one-to-one to this section's tool matrix and reference complete success/failure envelopes plus all nested result types. WebMCP currently has no `outputSchema` registration member, so the Adapter does not send this catalog to `registerTool`; Bridge contract tests validate every fulfilled result against the corresponding `$defs/*Output` schema and then verify the cross-field invariants that JSON Schema cannot express (derived totals, query hint conditions, row/axis equality, continuation endpoints, and step-warning presence).
 
 The input bundle above is documentation shorthand. Registration builds each tool's individual schema by copying the shared `$defs` into that tool schema; it never passes the outer `tools` catalog object as `inputSchema`, and contract tests resolve every `$ref` before registration.
 
@@ -945,13 +945,13 @@ type WebMCPCapability =
 
 Registration requires a Secure Context, an origin-keyed document/agent cluster where applicable, and `tools` Permissions Policy permission. MVP registration is top-level only; iframe and cross-origin exposure are outside scope. Aborting the registration controller removes all nine tools. Domain/state changes do not re-register them.
 
-Registration is all-or-nothing. Bootstrap first validates the complete fixture and constructs all nine static definitions without touching `document.modelContext`. It then registers them in the canonical §10 order under one registration controller. If registration at position 1–9 rejects, bootstrap aborts that controller, awaits cleanup, verifies that none of the names remain discoverable, records one capability failure, and exposes zero Bearing tools. A retry starts with a fresh controller and a fresh nine-definition set; it never continues a partially successful loop. Controlled-adapter tests inject a rejection at every registration position and assert zero discoverable tools, no leaked listeners, one stable capability classification, and successful clean retry.
+Registration is all-or-nothing. Bootstrap first validates the complete fixture and constructs all nine static definitions without touching `document.modelContext`. It then registers them in the canonical §10 order under one registration controller. If registration at position 1–9 rejects, bootstrap aborts that controller, awaits cleanup, verifies that none of the names remain discoverable, records one capability failure, and exposes zero Ieum tools. A retry starts with a fresh controller and a fresh nine-definition set; it never continues a partially successful loop. Controlled-adapter tests inject a rejection at every registration position and assert zero discoverable tools, no leaked listeners, one stable capability classification, and successful clean retry.
 
 Target-runtime evidence is required from both ChatGPT’s in-app browser and Google Chrome 149 or later with the WebMCP testing flag enabled.
 
 ## 16. Tool annotations
 
-**Official/spec erratum:** PRD §7.1 marks nominal lookups read-only, but the current draft defines `readOnlyHint: true` as modifying no state. Every Bearing invocation changes visible/log state through §8, so all nine tools use `false`.
+**Official/spec erratum:** PRD §7.1 marks nominal lookups read-only, but the current draft defines `readOnlyHint: true` as modifying no state. Every Ieum invocation changes visible/log state through §8, so all nine tools use `false`.
 
 | Tool | `readOnlyHint` | `untrustedContentHint` |
 | --- | --- | --- |
@@ -1026,27 +1026,27 @@ This table proves contract portability, not implementation readiness. Multilevel
 
 ### 18.3 GTFS Pathways and OSDM mapping
 
-**Official/spec erratum:** Bearing is **GTFS-Pathways-aligned**, not a literal `pathways.txt` producer, wire-compatible extension, or claim that GTFS models passenger-vehicle interiors. PRD wording that the route uses GTFS names “as-is” is corrected as follows.
+**Official/spec erratum:** Ieum is **GTFS-Pathways-aligned**, not a literal `pathways.txt` producer, wire-compatible extension, or claim that GTFS models passenger-vehicle interiors. PRD wording that the route uses GTFS names “as-is” is corrected as follows.
 
-| Bearing field/value | GTFS Pathways source | Classification |
+| Ieum field/value | GTFS Pathways source | Classification |
 | --- | --- | --- |
-| `length_m` | `length` (meters) | unit-explicit Bearing name with GTFS semantics |
-| `traversal_time_s` | `traversal_time` (seconds) | unit-explicit Bearing name with GTFS semantics |
-| `min_width_m` | `min_width` (meters) | unit-explicit Bearing name with GTFS semantics |
+| `length_m` | `length` (meters) | unit-explicit Ieum name with GTFS semantics |
+| `traversal_time_s` | `traversal_time` (seconds) | unit-explicit Ieum name with GTFS semantics |
+| `min_width_m` | `min_width` (meters) | unit-explicit Ieum name with GTFS semantics |
 | `stair_count` | `stair_count` | same name and directional-count semantics |
 | `max_slope` | `max_slope` | same ratio semantics; optional because the single-level fixture generates no slope |
-| `signpostedAs` | `signposted_as` | camel-case Bearing name preserving literal sign text semantics |
-| `pathway_mode: "walkway"` | `pathway_mode=1` | human-readable Bearing representation of GTFS mode |
-| `pathway_mode: "stairs"` | `pathway_mode=2` | human-readable Bearing representation of GTFS mode |
+| `signpostedAs` | `signposted_as` | camel-case Ieum name preserving literal sign text semantics |
+| `pathway_mode: "walkway"` | `pathway_mode=1` | human-readable Ieum representation of GTFS mode |
+| `pathway_mode: "stairs"` | `pathway_mode=2` | human-readable Ieum representation of GTFS mode |
 | `pathway_mode: "elevator"` | `pathway_mode=5` | human-readable representation; type portability only in MVP |
-| `pathway_mode: "door"` | no GTFS Pathways value | Bearing extension |
-| `pathway_mode: "vestibule"` | no GTFS Pathways value | Bearing extension |
+| `pathway_mode: "door"` | no GTFS Pathways value | Ieum extension |
+| `pathway_mode: "vestibule"` | no GTFS Pathways value | Ieum extension |
 
-`from`, `requestedTo`, `to`, `bearing`, `countedFeatures`, `landmarksPassed`, `landmarks`, `rendered`, `requiresContinuation`, `checkpoint`, and aggregate totals are Bearing fields, not GTFS wire fields. `walkSpeedPercent` and `additionalTransferTime_s` are OSDM-aligned effort/connection semantics: only `walkSpeedPercent` changes per-segment rail walking time; `additionalTransferTime_s` remains an optional portability fact and is not silently applied.
+`from`, `requestedTo`, `to`, `bearing`, `countedFeatures`, `landmarksPassed`, `landmarks`, `rendered`, `requiresContinuation`, `checkpoint`, and aggregate totals are Ieum fields, not GTFS wire fields. `walkSpeedPercent` and `additionalTransferTime_s` are OSDM-aligned effort/connection semantics: only `walkSpeedPercent` changes per-segment rail walking time; `additionalTransferTime_s` remains an optional portability fact and is not silently applied.
 
 ### 18.4 28 CFR 36.302(e) prose-to-structure mapping
 
-| Prose obligation/concept | Bearing representation |
+| Prose obligation/concept | Ieum representation |
 | --- | --- |
 | identify and describe accessibility features | discriminated `Candidate.accessibility` and full `Description.attributes` |
 | enough detail for independent assessment | individual facts and measurements, not one `accessible` boolean |
@@ -1092,7 +1092,7 @@ Expected sequence: layout inspection when needed, then query with `near`, `avail
 
 ### EVAL-02 — conversational reference and route
 
-Given ordered refs `6-12A`, `6-14D`, prompt: “How do I get from the second one to the restroom?” The Agent resolves “second” to `6-14D` and requests that route. Bearing does not parse the phrase. Verify lateral movement, meter facts, landmarks, and any checkpoint continuation.
+Given ordered refs `6-12A`, `6-14D`, prompt: “How do I get from the second one to the restroom?” The Agent resolves “second” to `6-14D` and requests that route. Ieum does not parse the phrase. Verify lateral movement, meter facts, landmarks, and any checkpoint continuation.
 
 ### EVAL-03 — description and comparison
 
@@ -1203,7 +1203,7 @@ site/
    └─ accessibility/
 docs/
 ├─ contracts/
-│  ├─ bearing-output.schema.json
+│  ├─ ieum-output.schema.json
 │  └─ bearing-rail-fixture.schema.json
 └─ evidence/demo-runtime.json
 ```
@@ -1228,7 +1228,7 @@ Hotel remains a specification proof throughout these gates. Adding a runtime hot
 
 **ADR-001 — Domain Core is pure TypeScript.** Spatial truth must be deterministic and testable without DOM/WebMCP.
 
-**ADR-002 — Bearing is a Bridge, not an internal Agent.** Natural-language planning stays external.
+**ADR-002 — Ieum is a Bridge, not an internal Agent.** Natural-language planning stays external.
 
 **ADR-003 — `a11y.*` is a public accessibility contract.** Stable refs and semantic facts replace DOM/component details.
 
@@ -1260,7 +1260,7 @@ Hotel remains a specification proof throughout these gates. Adding a runtime hot
 
 **ADR-017 — WebMCP evolution is isolated in the Adapter.** Registration signal, execution signal, and host capability remain distinct.
 
-**ADR-018 — GTFS semantics are aligned, not claimed wire-compatible.** Unit-explicit names and Bearing extensions are labeled.
+**ADR-018 — GTFS semantics are aligned, not claimed wire-compatible.** Unit-explicit names and Ieum extensions are labeled.
 
 **ADR-019 — Rail is the sole runtime MVP domain.** Hotel demonstrates schema portability only.
 
@@ -1284,7 +1284,7 @@ Hotel remains a specification proof throughout these gates. Adding a runtime hot
 - Step values are estimates derived from measured meter geometry.
 - Hotel is schema/documentation proof only.
 - Direct blind-user validation has not occurred. Keyboard, screen-reader, monitor-off, and synthetic-fixture checks are engineering verification, not participant research.
-- Bearing is an accessibility prototype informed by cited sources, not certified legal, regulatory, WCAG, safety, routing, or real-world operational compliance.
+- Ieum is an accessibility prototype informed by cited sources, not certified legal, regulatory, WCAG, safety, routing, or real-world operational compliance.
 
 ### 25.3 Evidence-dependent risks/open questions
 
@@ -1371,7 +1371,7 @@ Each row has exactly one disposition: **Preserved**, **Official/spec erratum**, 
 | §17 limitations/communication | §§1, 18.5, 25 | bounded prototype language and disclosures | Preserved |
 | §18 risks | §25.3 | non-schedule evidence risks retained | Preserved |
 | §19 open questions | §25.3 | resolved facts removed; host/accessibility questions retained | Preserved |
-| §21 identity | §§1, 22, 24 | Bearing selected throughout | Preserved |
+| §21 identity | §§1, 22, 24 | Ieum selected throughout | Preserved |
 
 PRD §20 remains the source/bibliography for product claims and is not misclassified as a product contract.
 
@@ -1394,7 +1394,7 @@ Architecture requires evidence; it does not assert these items are already compl
 - **Provenance:** disclose whether any work predates the submission period and distinguish dated prior work from meaningful WebMCP work.
 - **IP/assets:** record source, license, and authorization for every dependency, SDK, API, dataset, image, font, audio, and other asset; exclude third-party trademarks and unauthorized material.
 - **Synthetic assets:** `intercity-car-6.json` and before/after mockups are independently authored and unbranded; documented operational facts may inform them, but no third-party diagram, screenshot, artwork, or proprietary dataset is reproduced.
-- **Social preview:** `site/public/og.png` is an original unbranded Bearing asset; English Open Graph title/description and asset provenance are recorded with the other shipped assets.
+- **Social preview:** `site/public/og.png` is an original unbranded Ieum asset; English Open Graph title/description and asset provenance are recorded with the other shipped assets.
 
 ## 27. Final recommended structure and success criteria
 
@@ -1414,7 +1414,7 @@ independently authored meter-source rail fixture
 
 The architecture is ready for implementation when all of the following are true:
 
-- Exactly one public Bearing contract exists for the nine tools, exact types, errors, annotations, and state behavior.
+- Exactly one public Ieum contract exists for the nine tools, exact types, errors, annotations, and state behavior.
 - Domain/UI/Agent facts derive from the same fixture and App Store.
 - Query 0/12/13+ boundaries, deterministic order/hints, and compare 2–4 semantics pass exact tests.
 - Routes preserve lateral movement, meter totals, bearings, rendering separation, four-segment continuation, and all eight acceptance cases.
@@ -1425,4 +1425,4 @@ The architecture is ready for implementation when all of the following are true:
 - Challenge evidence covers Stage One, all four Stage Two criteria, unauthenticated live access, MIT, English materials, provenance/IP, and a no-background-music public demo.
 - Limitations and unresolved runtime/accessibility questions remain disclosed; no implementation, certification, participant-validation, deployment, or submission claim is made without evidence.
 
-Bearing bridges a person and the spatial facts already owned by a site. WebMCP is the transport; the durable product is the interrogable, deterministic, human-controlled accessibility contract.
+Ieum bridges a person and the spatial facts already owned by a site. WebMCP is the transport; the durable product is the interrogable, deterministic, human-controlled accessibility contract.

@@ -115,3 +115,12 @@
 - 계약 결과: Bearing 명칭, 철도 MVP, 9개 `a11y.*` 도구, 미터 원본/파생 렌더링, Query 0/12/13+, Compare 2–4, 4-segment Route continuation, append-idempotent select, 1-step undo, same-call human confirmation, UI1–UI8, GTFS/호텔 portability, 대회 적격성·제출 증빙을 하나의 계약으로 동기화했다.
 - 검증 결과: 1–27 섹션 순서, 40개 fence 균형, 9개 도구 계약/예시/annotation과 UI1–UI8 행 수, 모든 JSON 코드·9개 예시 JSON 문법, 출력 스키마 `$ref` 해소, obsolete/placeholder 검색, `git diff --check`, PRD 무변경을 확인했다. 도메인과 WebMCP/UI/규정 영역의 독립 재검토는 모두 PASS였다.
 - 판정: 문서 계약 기준으로 구현 가능하고 대회 주제·필수 제출/적격성 규정에 부합한다. 다만 실제 ChatGPT/Chrome 호출, 120초 same-call confirmation, 접근성 실행 시험, 배포·참가자 개별 적격성·제출 완료는 구현 후 별도 증거가 필요한 상태이며 문서도 이를 완료로 주장하지 않는다.
+
+---
+
+## 후속: 프로젝트명 통일 (PR #1)
+
+위 기록은 동기화 작업 당시의 상태 그대로 둔다. 그 뒤 이름을 `Ieum` 하나로 확정하면서
+`docs/contracts/bearing-output.schema.json`은 `docs/contracts/ieum-output.schema.json`으로
+바뀌었고, `$id`도 `https://ieum.example/...`가 되었다. `RouteSegment.bearing`은 제품명이 아니라
+방위각을 뜻하는 공간 용어이므로 필드명 그대로 남는다.
