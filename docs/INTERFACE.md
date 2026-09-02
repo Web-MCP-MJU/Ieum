@@ -48,16 +48,28 @@ usecases.confirm()                        // ToolResult<{ outcome }>  ← 사용
 모든 함수가 같은 봉투를 씁니다.
 
 ```ts
-type ToolResult<T> = {
-  ok: boolean;
-  data?: T;
-  state?: SelectionState;   // 조작 함수는 항상 포함
-  hint?: string;
-  error?: { code: ToolErrorCode; message: string };  // message는 사용자에게 그대로 읽어줘도 되는 한 문장
+// 조회: get_layout · query · describe · get_route · compare
+type ReadResult<T>  = { ok: true; data: T } | { ok: false; error: DomainError; hint?: string };
+// 조작: select · undo · confirm — 성공이든 실패든 state를 항상 포함합니다
+type StateResult<T> =
+  | { ok: true;  data: T; state: SelectionState }
+  | { ok: false; state: SelectionState; error: DomainError; hint?: string };
+
+type SelectionState = {
+  selected: string[];
+  selectedCount: number;    // selected에서 파생. 직접 쓰지 마세요
+  priceTotal_usd: number;   // selected에서 파생
+  undoable: boolean;        // 지금 undo가 성공할 수 있는가
+  status: "draft" | "confirmation_pending" | "confirmed";
 };
 ```
 
-`ok === false`일 때 `error.message`를 그대로 화면에 띄우면 됩니다. 별도 번역이 필요 없습니다.
+조작 함수가 **실패해도** `state`가 들어옵니다. 실패 후 화면을 다시 그리려고 `getSelection()`을
+한 번 더 부를 필요가 없습니다.
+
+`ok === false`일 때 `error.message`는 고정 템플릿이라 그대로 화면에 띄워도 안전합니다.
+사용자가 입력한 ref를 되돌려주지 않으므로, 그대로 `textContent`에 넣으세요
+(`innerHTML` 금지 — Architecture 16절).
 
 ## 상태 구독
 
@@ -74,7 +86,7 @@ store.subscribe((state: AppState) => {
 | `selection: string[]` | 선택된 좌석 표시 |
 | `highlightedRefs: string[]` | 툴이 방금 참조한 좌석 강조 |
 | `activeRoute: Route \| null` | 경로 표시. **`segments`를 읽어서 그립니다.** 좌표 계산을 UI에서 하지 않습니다 |
-| `confirmationStatus` | `"draft"` \| `"confirmation_pending"` \| `"confirmed"` |
+| `confirmationStatus` | `"draft"` \| `"confirmation_pending"` \| `"confirmed"` — 이 셋뿐입니다 |
 | `toolLog` | 최근 호출 목록 (툴 이름 + 인자) |
 
 ## 확인 다이얼로그
@@ -95,12 +107,26 @@ store.resolveConfirmation("confirmed");   // 또는 "cancelled"
 
 ```ts
 import { car6 } from "../domain/car-6.ts";
-car6.seats      // 각 좌석의 position: { x_m, y_m }
+car6.seats      // 각 좌석의 position_m: { x, y }
 car6.aisleY_m   // 통로 중심선 y
 car6.bounds_m   // { length, width } — 뷰박스 스케일 기준
+car6.axisLabels // 축 방향을 부르는 말. 렌더에 하드코딩하지 않습니다
 ```
 
 x는 객차 앞(0)에서 뒤로, y는 폭 방향입니다. A·B가 y 작은 쪽, C·D가 큰 쪽입니다.
+좌석 ref는 객차 번호를 포함합니다: `6-12A`.
+
+세그먼트의 방향은 **각도**로 들어옵니다.
+
+```ts
+segment.bearing  // { frame: "egocentric" | "car_axis"; degrees: number }  0 이상 360 미만
+```
+
+`car_axis`는 0이 객차 앞쪽, `egocentric`은 0이 진행 직전 진행방향이고, 둘 다 시계방향으로
+증가합니다. **"왼쪽"·"오른쪽"은 데이터에 없습니다** — 사람이 어느 쪽을 보고 있느냐에 따라
+달라지므로 렌더 시점에만 나옵니다. UI가 화살표를 그릴 때는 `car_axis`로 환산해서 쓰세요.
+경로 위 각 구간의 끝점 ref(`row_12_aisle`, `restroom_aisle`)도 `segments`에 들어 있어
+좌표 계산 없이 선을 그을 수 있습니다.
 
 ## 접근성 요구사항 (UI 필수)
 

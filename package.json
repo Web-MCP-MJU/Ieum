@@ -2,6 +2,7 @@
   "name": "ieum",
   "version": "0.1.0",
   "private": true,
+  "engines": { "node": ">=23.6" },
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -17,12 +17,22 @@
 
 <script type="module">
 const out = document.getElementById('out');
-const log = [];
+let initialized = false;
 const put = (label, verdict, detail = '') => {
+  if (!initialized) {
+    out.textContent = '';
+    initialized = true;
+  }
   const cls = verdict === true ? 'ok' : verdict === false ? 'bad' : 'warn';
   const mark = verdict === true ? 'PASS' : verdict === false ? 'FAIL' : 'INFO';
-  log.push(`<span class="${cls}">[${mark}]</span> ${label}${detail ? ' — ' + detail : ''}`);
-  out.innerHTML = log.join('\n');
+  const span = document.createElement('span');
+  span.className = cls;
+  span.textContent = `[${mark}]`;
+  out.appendChild(span);
+  let text = ` ${label}`;
+  if (detail) text += ` — ${detail}`;
+  out.appendChild(document.createTextNode(text));
+  out.appendChild(document.createTextNode('\n'));
 };
 
 // 0. What browser is this, actually? The most common cause of a missing
