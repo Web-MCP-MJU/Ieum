@@ -136,6 +136,7 @@ type Seat = {
   position_m: { x: number; y: number };
   side: "window" | "aisle";
   facing: "forward" | "backward";
+  quietCar: boolean;
   price_usd: number;
   available: boolean;
   wheelchairSpace: boolean;
@@ -150,6 +151,8 @@ type Seat = {
 ```
 
 `Seat` exposes individual decision facts rather than an opaque `accessible` boolean. Wheelchair, transfer, companion, armrest, service-animal foot-space, bulkhead, and exit-row facts remain separately interrogable.
+
+`quietCar` is an explicitly authored rail fact, not an inference from price, class, or label. Fixture loading copies one validated car-level value to every canonical seat; `rail.quietCar: true` and `false` compare against that boolean exactly, and `Candidate.rail.quietCar` preserves the fact in results.
 
 ```ts
 type LandmarkType =
@@ -238,6 +241,7 @@ type Candidate = CandidateBase & (
         seatLetter: string;
         side: "window" | "aisle";
         facing: "forward" | "backward";
+        quietCar: boolean;
       };
       hotel?: never;
       accessibility: {
@@ -649,7 +653,7 @@ Examples show the complete successful envelope, including required state project
 | Tool | Example input | Example successful projection |
 | --- | --- | --- |
 | `a11y.get_layout` | `{ "units": "feet" }` | `{ "ok": true, "data": { "domain": "rail", "layoutId": "Car 6, Business Class", "bounds_m": { "length": 26.4, "width": 3.1 }, "seatCount": { "total": 60, "available": 47 }, "accessibleCount": { "wheelchairSpaces": 2, "transferSeats": 2, "movableArmrestSeats": 16 }, "landmarks": [], "referencePoints": ["entrance_front", "restroom"], "summary": "One single-level intercity rail car." } }` |
-| `a11y.query` | `{ "near": "restroom", "rail": { "facing": "forward", "side": "window" } }` | `{ "ok": true, "data": { "items": [{ "ref": "6-12A", "label": "Seat 12A", "line": "Seat 12A, forward-facing window seat.", "price_usd": 72, "available": true, "features": ["power_outlet"], "distance": { "from": "restroom", "distance_m": 7.3, "rendered": "24 feet" }, "domain": "rail", "rail": { "row": 12, "seatLetter": "A", "side": "window", "facing": "forward" }, "accessibility": { "wheelchairSpace": false, "transferSeat": false, "companionSeat": false, "movableArmrest": true, "footSpace_in2": 288, "bulkhead": false, "exitRow": false } }], "appliedCriteria": { "near": "restroom", "availableOnly": true, "rail": { "facing": "forward", "side": "window" } }, "totalMatched": 1 } }` |
+| `a11y.query` | `{ "near": "restroom", "rail": { "facing": "forward", "side": "window" } }` | `{ "ok": true, "data": { "items": [{ "ref": "6-12A", "label": "Seat 12A", "line": "Seat 12A, forward-facing window seat.", "price_usd": 72, "available": true, "features": ["power_outlet"], "distance": { "from": "restroom", "distance_m": 7.3, "rendered": "24 feet" }, "domain": "rail", "rail": { "row": 12, "seatLetter": "A", "side": "window", "facing": "forward", "quietCar": true }, "accessibility": { "wheelchairSpace": false, "transferSeat": false, "companionSeat": false, "movableArmrest": true, "footSpace_in2": 288, "bulkhead": false, "exitRow": false } }], "appliedCriteria": { "near": "restroom", "availableOnly": true, "rail": { "facing": "forward", "side": "window" } }, "totalMatched": 1 } }` |
 | `a11y.describe` | `{ "ref": "6-12A", "directionStyle": "relative" }` | `{ "ok": true, "data": { "ref": "6-12A", "line": "Seat 12A is a forward-facing window seat.", "attributes": { "price_usd": 72, "available": true }, "relations": [{ "to": "restroom", "distance_m": 7.3, "rendered": "24 feet toward the rear", "landmarksPassed": ["luggage_rack"] }], "followUps": ["Ask for the route from the front entrance."] } }` |
 | `a11y.get_route` | `{ "from": "entrance_front", "to": "6-12A" }` | `{ "ok": true, "data": { "from": "entrance_front", "requestedTo": "6-12A", "to": "6-12A", "totalLength_m": 7.3, "totalTraversalTime_s": 6.08, "segments": [{ "pathway_mode": "walkway", "from": "entrance_front", "to": "row_12_aisle", "length_m": 6.7, "traversal_time_s": 5.58, "bearing": { "frame": "car_axis", "degrees": 180 }, "countedFeatures": { "feature": "row", "count": 6 }, "landmarksPassed": [] }, { "pathway_mode": "walkway", "from": "row_12_aisle", "to": "6-12A", "length_m": 0.6, "traversal_time_s": 0.5, "bearing": { "frame": "egocentric", "degrees": 270 }, "landmarksPassed": [] }], "landmarks": [], "requiresContinuation": false, "rendered": { "units": "feet", "directionStyle": "relative", "instructions": ["Move toward the rear, passing 6 rows.", "Move left from the aisle to seat 12A."], "summary": "Walk toward the rear, then move left to seat 12A." } } }` |
 | `a11y.compare` | `{ "refs": ["6-12A", "6-14D"] }` | `{ "ok": true, "data": { "axes": [{ "key": "available", "label": "Available" }, { "key": "price_usd", "label": "Price (USD)" }], "rows": [{ "ref": "6-12A", "values": { "available": true, "price_usd": 72 } }, { "ref": "6-14D", "values": { "available": false, "price_usd": 68 } }] } }` |

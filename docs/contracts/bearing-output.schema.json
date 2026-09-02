@@ -183,10 +183,11 @@
             "ref": true, "label": true, "line": true, "price_usd": true, "available": true, "features": true, "distance": true,
             "domain": { "const": "rail" },
             "rail": {
-              "type": "object", "additionalProperties": false, "required": ["row", "seatLetter", "side", "facing"],
+              "type": "object", "additionalProperties": false, "required": ["row", "seatLetter", "side", "facing", "quietCar"],
               "properties": {
                 "row": { "type": "integer" }, "seatLetter": { "type": "string" },
-                "side": { "enum": ["window", "aisle"] }, "facing": { "enum": ["forward", "backward"] }
+                "side": { "enum": ["window", "aisle"] }, "facing": { "enum": ["forward", "backward"] },
+                "quietCar": { "type": "boolean" }
               }
             },
             "accessibility": {
