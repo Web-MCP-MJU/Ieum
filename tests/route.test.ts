@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { car6 } from "../src/domain/car-6.ts";
-import { resolve, route } from "../src/domain/route-engine.ts";
+import { resolve, route, routeLength } from "../src/domain/route-engine.ts";
 import { STEPS_NOTE } from "../src/domain/render.ts";
 import { MAX_SEGMENTS } from "../src/domain/types.ts";
 import type { Layout, RenderOptions, Route, SpatialRef } from "../src/domain/types.ts";
@@ -311,4 +311,16 @@ test("the authored fixture is what the engine reads", () => {
     assert.ok(!/\b(left|right)\b/i.test(m.label),
       `landmark label "${m.label}" bakes in a point of view`);
   }
+});
+
+test("routeLength agrees with the full route it skips building", () => {
+  // query and compare sort sixty seats by distance; they must not disagree with
+  // the route the traveller is eventually given.
+  for (const [from, to] of [["entrance_front", "6-12A"], ["6-12A", "restroom"],
+                            ["6-12A", "6-12D"], ["6-12A", "6-12B"],
+                            ["6-12A", "cafe_car"]] as const) {
+    assert.equal(routeLength(car6, from, to), ok(from, to).totalLength_m, `${from} -> ${to}`);
+  }
+  assert.equal(routeLength(car6, "6-12A", "6-12A"), 0, "the same place costs nothing");
+  assert.equal(routeLength(car6, "99Z", "6-12A"), null, "an unknown ref has no distance");
 });

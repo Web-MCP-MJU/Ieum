@@ -277,6 +277,31 @@ function describeDestination(layout: Layout, ref: SpatialRef): Destination {
   };
 }
 
+/**
+ * Walking distance only, with no rendering. `query` and `compare` need the number
+ * to sort and to say "N ft from the front door"; building instructions and prose
+ * for sixty seats to read one field off each is waste the caller never sees.
+ * Returns null when the two refs have no modelled path between them.
+ */
+export function routeLength(
+  layout: Layout, fromRef: SpatialRef, toRef: SpatialRef,
+): number | null {
+  if (fromRef === toRef) return 0;
+  const from = resolve(layout, fromRef);
+  if (isError(from)) return null;
+  const to = resolve(layout, toRef);
+  if (isError(to)) return null;
+
+  const portals = (layout.reachedThrough[toRef] ?? [])
+    .map((r) => layout.portals.find((p) => p.ref === r))
+    .filter((p): p is Portal => p !== undefined);
+
+  const drafts = plan(layout, from, to, portals);
+  if (drafts.length === 0) return null;
+  return round(drafts.reduce(
+    (n, d) => n + Math.hypot(d.toPos.x - d.fromPos.x, d.toPos.y - d.fromPos.y), 0));
+}
+
 export function route(
   layout: Layout, fromRef: SpatialRef, toRef: SpatialRef, opts: RenderOptions = {},
 ): Route | DomainError {
