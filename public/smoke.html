@@ -25,6 +25,23 @@ const put = (label, verdict, detail = '') => {
   out.innerHTML = log.join('\n');
 };
 
+// 0. What browser is this, actually? The most common cause of a missing
+//    modelContext is simply not being in a build that ships it.
+const ua = navigator.userAgent;
+const chromeVer = (ua.match(/Chrome\/(\d+)/) || [])[1];
+const isEdge = /Edg\//.test(ua);
+
+put('browser', null, ua);
+if (!chromeVer) {
+  put('Chrome build', false, 'Not Chrome/Chromium. WebMCP ships in Chrome 149+ or the ChatGPT desktop in-app browser.');
+} else if (isEdge) {
+  put('Chrome build', false, `Edge ${chromeVer} detected. Use Chrome 149+ \u2014 the testing flag is Chrome-only.`);
+} else if (Number(chromeVer) < 149) {
+  put('Chrome build', false, `Chrome ${chromeVer} is older than 149. Update Chrome.`);
+} else {
+  put('Chrome build', true, `Chrome ${chromeVer}`);
+}
+
 // 1. secure context
 put('secure context', window.isSecureContext, `isSecureContext=${window.isSecureContext}`);
 
@@ -94,6 +111,12 @@ if (typeof mc?.registerTool === 'function') {
 
   window.__ieumAbort = () => { controller.abort(); put('controller.abort() — tool unregistered', true); };
 } else {
-  put('cannot continue', false, 'document.modelContext.registerTool is not available in this browser');
+  put('cannot continue', false, 'document.modelContext.registerTool is not available here');
+  const why = !chromeVer
+    ? 'You are not in Chrome. Open this page in Chrome 149+, or in the ChatGPT desktop app\u2019s in-app browser.'
+    : Number(chromeVer) < 149
+      ? `Chrome ${chromeVer} is older than 149. Update Chrome, then enable the flag.`
+      : 'Chrome is new enough, so the flag is almost certainly not active. Open chrome://flags/#enable-webmcp-testing, set it to Enabled, then press the Relaunch button at the bottom of that page. Closing and reopening the window is not always enough.';
+  put('what to do', null, why);
 }
 </script>
