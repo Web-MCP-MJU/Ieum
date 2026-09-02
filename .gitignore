@@ -40,5 +40,6 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Local workflow state
+.worktrees/
 .superpowers/sdd/
 .devpost-hackathon-state.json
