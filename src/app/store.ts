@@ -1,6 +1,6 @@
 import type { Route, SpatialRef } from "../domain/types.ts";
 
-export type ConfirmationStatus = "draft" | "confirmation_pending" | "confirmed";
+export type ConfirmationStatus = "draft" | "confirmation_pending" | "confirmed" | "cancelled";
 
 export type AppState = {
   layout: { layoutId: string; domain: "rail" | "hotel" };
@@ -79,5 +79,9 @@ export const store = {
   reset(): void {
     currentState = { ...initialState };
     listeners.forEach((l) => l(currentState));
+  },
+
+  resolveConfirmation(status: "confirmed" | "cancelled"): void {
+    this.setConfirmationStatus(status);
   },
 };
