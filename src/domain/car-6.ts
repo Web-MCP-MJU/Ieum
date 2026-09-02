@@ -1,139 +1,64 @@
-import type { Layout, Landmark, Seat } from "./types.ts";
+import type { Layout, Seat } from "./types.ts";
+import fixture from "../data/intercity-car-6.json" with { type: "json" };
 
 /**
  * Unbranded US intercity rail car, business class, 2+2 seating.
+ *
+ * The spatial truth lives in `src/data/intercity-car-6.json` and is authored, not
+ * generated: a hold pattern produced by a formula is a formula, and reviewers
+ * cannot tell which coordinates were measured and which fell out of a loop. This
+ * module only loads that file and refuses to publish it if it is incoherent.
  *
  * Geometry follows typical intercity dimensions but names no operator: contest
  * rules forbid third-party trademarks in a submission, and seat-layout facts are
  * not copyrightable while operator names are.
  *
  * Coordinate frame: x runs from the front of the car toward the rear, y across it.
- * Seats project onto the aisle at AISLE_Y to travel.
  */
 
-const CAR_LENGTH_M = 22.0;
-const CAR_WIDTH_M = 3.0;
-const AISLE_Y = 1.5;
-const ROW_PITCH_M = 1.1;
-const FIRST_ROW_X = 3.0;
-const ROWS = 15;
+const layout = fixture as unknown as Layout;
 
-/** Lateral seat positions. A and D are at the windows, B and C flank the aisle. */
-const SEAT_Y: Record<string, number> = { A: 0.35, B: 0.95, C: 2.05, D: 2.65 };
-
-const landmarks: Landmark[] = [
-  {
-    key: "entrance_front",
-    label: "Front door",
-    position: { x_m: 0.8, y_m: AISLE_Y },
-    landmarkType: "primary",
-    // Sits on the aisle centreline at the end of the car: it cannot be walked past.
-    sensoryChannels: ["tactile", "auditory", "airflow"],
-    detectability: { caneUser: "high", dogGuide: "high" },
-    signpostedAs: "CAR 6",
-  },
-  {
-    key: "luggage_rack",
-    label: "Luggage rack (front right)",
-    position: { x_m: 1.6, y_m: 2.65 },
-    landmarkType: "secondary",
-    // Beside the path, so a cane sweeping the other side misses it.
-    sensoryChannels: ["tactile"],
-    detectability: { caneUser: "medium", dogGuide: "low" },
-  },
-  {
-    key: "entrance_rear",
-    label: "Rear door",
-    position: { x_m: 19.8, y_m: AISLE_Y },
-    landmarkType: "primary",
-    sensoryChannels: ["tactile", "auditory", "airflow"],
-    detectability: { caneUser: "high", dogGuide: "high" },
-    signpostedAs: "CAR 6",
-  },
-  {
-    key: "restroom",
-    label: "Accessible restroom (rear left)",
-    position: { x_m: 20.6, y_m: 0.7 },
-    landmarkType: "secondary",
-    sensoryChannels: ["tactile", "olfactory", "auditory"],
-    detectability: { caneUser: "high", dogGuide: "medium" },
-    signpostedAs: "RESTROOM",
-  },
-  {
-    key: "cafe_car",
-    label: "Cafe car (through the rear door)",
-    position: { x_m: 21.6, y_m: AISLE_Y },
-    landmarkType: "primary",
-    sensoryChannels: ["auditory", "olfactory"],
-    detectability: { caneUser: "high", dogGuide: "high" },
-    signpostedAs: "CAFE",
-  },
-];
-
-/** Rows 1-9 face forward; rows 10-15 face backward around the rear tables. */
-const facingFor = (row: number): Seat["facing"] => (row <= 9 ? "forward" : "backward");
-
-/** A deterministic pseudo-random hold pattern, so tests and demos are reproducible. */
-const isHeld = (row: number, letter: string): boolean =>
-  (row * 7 + letter.charCodeAt(0)) % 4 === 0;
-
-function buildSeats(): Seat[] {
-  const seats: Seat[] = [];
-
-  for (let row = 1; row <= ROWS; row++) {
-    const x = FIRST_ROW_X + (row - 1) * ROW_PITCH_M;
-    const bulkhead = row === 1;
-
-    for (const letter of ["A", "B", "C", "D"]) {
-      const y = SEAT_Y[letter]!;
-      const side: Seat["side"] = letter === "A" || letter === "D" ? "window" : "aisle";
-
-      // 49 CFR 38.125(d): one wheelchair space plus an adjacent transfer seat and
-      // a companion seat, all in the bulkhead row where the clear floor space is.
-      const wheelchairSpace = row === 1 && letter === "D";
-      const transferSeat = row === 1 && letter === "C";
-      const companionSeat = row === 1 && letter === "B";
-
-      // Movable aisle armrests on the forward half, so a transfer is possible
-      // without walking the length of the car.
-      const movableArmrest = side === "aisle" && row <= 7;
-
-      const footSpace_in2 = bulkhead ? 1180 : side === "window" ? 560 : 640;
-
-      const features: string[] = ["power_outlet"];
-      if (row >= 10) features.push("table");
-      if (row >= 12) features.push("quiet_zone");
-      if (bulkhead) features.push("extra_legroom");
-
-      seats.push({
-        ref: `${row}${letter}`,
-        row,
-        seatLetter: letter,
-        position: { x_m: x, y_m: y },
-        side,
-        facing: facingFor(row),
-        price_usd: bulkhead ? 109 : row >= 12 ? 79 : 89,
-        available: !isHeld(row, letter),
-        wheelchairSpace,
-        transferSeat,
-        companionSeat,
-        movableArmrest,
-        footSpace_in2,
-        bulkhead,
-        exitRow: false,
-        features,
-      });
-    }
-  }
-  return seats;
+function fail(message: string): never {
+  throw new Error(`intercity-car-6.json: ${message}`);
 }
 
-export const car6: Layout = {
-  domain: "rail",
-  layoutId: "Car 6, Business Class",
-  bounds_m: { length: CAR_LENGTH_M, width: CAR_WIDTH_M },
-  aisleY_m: AISLE_Y,
-  rowPitch_m: ROW_PITCH_M,
-  seats: buildSeats(),
-  landmarks,
-};
+function validate(l: Layout): Layout {
+  const refs = new Set<string>();
+  for (const s of l.seats) {
+    if (refs.has(s.ref)) fail(`duplicate seat ref ${s.ref}`);
+    refs.add(s.ref);
+
+    const { x, y } = s.position_m;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) fail(`${s.ref} has a non-finite position`);
+    if (x < 0 || x > l.bounds_m.length) fail(`${s.ref} sits outside the car at x=${x}`);
+    if (y < 0 || y > l.bounds_m.width) fail(`${s.ref} sits outside the car at y=${y}`);
+
+    // A seat on the aisle centreline would make its step-out distance zero and
+    // hide the cost of getting out of the seat at all.
+    if (y === l.aisleY_m) fail(`${s.ref} sits on the aisle centreline`);
+
+    // 49 CFR 38.125(d)(2) is clear floor space with no seat installed, so there
+    // is no armrest to move and nothing to transfer out of.
+    if (s.wheelchairSpace && s.movableArmrest) fail(`${s.ref} is a wheelchair space with an armrest`);
+    if (s.wheelchairSpace && s.transferSeat) fail(`${s.ref} is both the space and the transfer seat`);
+  }
+
+  for (const k of Object.keys(l.reachedThrough)) {
+    if (!l.landmarks.some((m) => m.key === k)) fail(`reachedThrough names unknown landmark ${k}`);
+    for (const p of l.reachedThrough[k] ?? []) {
+      if (!l.portals.some((q) => q.ref === p)) fail(`reachedThrough names unknown portal ${p}`);
+    }
+  }
+
+  for (const m of l.landmarks) {
+    if (refs.has(m.key)) fail(`${m.key} is both a seat and a landmark`);
+  }
+
+  return l;
+}
+
+export const car6: Layout = validate(layout);
+
+/** Seat lookup by ref, used by every engine that has to resolve one. */
+export const seatByRef = (l: Layout, ref: string): Seat | undefined =>
+  l.seats.find((s) => s.ref === ref);
