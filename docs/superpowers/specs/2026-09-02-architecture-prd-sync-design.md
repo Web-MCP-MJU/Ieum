@@ -22,7 +22,7 @@ Chrome and OpenAI runtime guidance is advisory and subordinate to the WebMCP dra
 
 The rewrite must:
 
-- retain all 27 numbered Architecture sections and each section's role, although subsections may be reorganized;
+- retain Architecture §§1–27 and each section's role, although subsections may be reorganized; convert the current numbered §0 revision summary into an unnumbered preamble so the document has exactly 27 numbered sections;
 - preserve all nine public `a11y.*` tools and the complete judging journey (`get_layout → query → describe/get_route → compare → select/get_selection/undo → confirm`);
 - preserve the PRD goals and non-goals without schedule-based cuts or new product capabilities;
 - use `Bearing`, `rail`, `intercity-car-6.json`, `Car 6, Business Class`, and USD throughout prose, types, examples, ADRs, tests, phases, and success criteria;
@@ -45,6 +45,8 @@ At minimum, the matrix must contain separate rows for:
 | Traceability item | Required disposition or treatment |
 | --- | --- |
 | G1–G5 and every §3.2 non-goal | Preserve individually; map each to architecture boundaries or explicit exclusions. |
+| §4.1 standards gap | Preserve the bounded claim about the gap among GTFS Pathways, ITU-T F.921, 28 CFR 36.302(e), and 14 CFR 382.41; do not claim an exhaustive standards search. |
+| §4.2 GTFS/OSDM relationship | Apply the GTFS naming/mode erratum below while preserving `max_slope`, `signposted_as`/`signpostedAs`, `walkSpeedPercent`, and `additionalTransferTime_s` semantics. |
 | P1–P7 | Preserve individually in data, rendering, state, UI, or testing contracts. |
 | M1–M6 | Preserve the product and evidence obligations; classify only schedule/order language as intentionally non-architectural. |
 | E1 | Preserve as the nine-tool portability/specification proof. |
@@ -62,7 +64,7 @@ At minimum, the matrix must contain separate rows for:
 | Risks and open questions | Carry unresolved runtime/accessibility facts forward as evidence-dependent questions, not assertions. |
 | Identity | Preserve Bearing and bounded naming/novelty language; remove Wayfinder public identity. |
 
-Before completion, every normative PRD subsection in §§3, 5–14, 16–19, and 21 must map to at least one matrix row. PRD §15 schedule content may be classified intentionally non-architectural, but its embedded product requirements must be traced elsewhere. PRD source/bibliography material in §§20 must remain available to support claims without being mistaken for a product contract.
+Before completion, every normative PRD subsection in §§3–14, 16–19, and 21 must map to at least one matrix row. PRD §15 schedule content may be classified intentionally non-architectural, but its embedded product requirements must be traced elsewhere. PRD source/bibliography material in §20 must remain available to support claims without being mistaken for a product contract.
 
 ## Architecture and Identity to Preserve
 
@@ -108,7 +110,7 @@ The Architecture must include one canonical matrix and matching JSON Schemas/exa
 
 The Architecture must define every referenced input and output type in full, without dangling aliases or prose-only fields. That includes `ToolResult<T>`, `SelectionState`, `ToolErrorCode`, `Seat`, `QueryCriteria`, `RenderOptions`, `Candidate`, `Comparison`, `Landmark`, `LayoutSummary`, `Description`, `RouteSegment`, `Route`, and `AppState`.
 
-`ToolResult<T>` must define success and domain-failure shapes unambiguously, including whether `data`, `state`, `hint`, and `error` are required or forbidden in each branch. Expected domain failures return `ok: false`; unexpected runtime/programming failures reject. A required mutation state projection may not be omitted on an expected domain result when the current state is needed for recovery.
+`ToolResult<T>` must define success and domain-failure shapes unambiguously, including whether `data`, `state`, `hint`, and `error` are required or forbidden in each branch. Expected domain failures return `ok: false`; unexpected runtime/programming failures reject. Every invocation of `select`, `undo`, or `confirm`, including an expected domain failure, returns the unchanged or resulting full `SelectionState`; read-only failures do not return state.
 
 `SelectionState` must contain `selected`, `selectedCount`, `priceTotal_usd`, `undoable`, and `status: "draft" | "confirmation_pending" | "confirmed"`. `selectedCount` and `priceTotal_usd` are derived from `selected`; examples and tests must prove they cannot diverge.
 
@@ -132,15 +134,67 @@ Capability/bootstrap failures are not domain errors. The Architecture must keep 
 
 `a11y.query` and `a11y.compare` have different cardinality rules:
 
-- `query` returns between 0 and 12 candidates. It filters first, records the pre-slice count in `totalMatched`, applies one documented stable semantic comparator, and uses ascending `ref` as the final tie-breaker. For the rail fixture, the comparator must specify exact axes and directions; when `near` is present, distance from `near` is the first axis, followed by deterministic rail-domain axes, then `ref`.
+- `query` returns between 0 and 12 candidates. It filters first, records the pre-slice count in `totalMatched`, and sorts by: distance ascending when `near` exists; availability descending when `availableOnly` is false; `price_usd` ascending; row ascending; seat letter ascending; and `ref` ascending as the final tie-breaker.
 - `compare` accepts exactly 2–4 unique valid refs and returns exactly those 2–4 candidates in input order. It never applies the query cap, performs search, or silently drops an invalid/unavailable ref.
 - `query` has no `more`, page, cursor, continuation token, offset, or pagination behavior.
-- For 13 or more matches, `query` returns the first 12, keeps the true count in `totalMatched`, and supplies a `hint` naming at least one currently supported `QueryCriteria` field path that can narrow the result. The Architecture must define a deterministic hint-axis selection rule and must never suggest an unsupported or already-satisfied axis.
-- For 0–12 matches, `hint` is optional only when it communicates a valid next action; `totalMatched` remains mandatory, including zero. The Architecture must choose and consistently test whether zero matches is an empty successful result or `NO_MATCH`; it may not describe both behaviors.
+- For 13 or more matches, `query` returns the first 12, keeps the true count in `totalMatched`, and chooses the first absent applicable narrowing axis from: `near`; `maxDistance_m` when `near` exists; `priceMax_usd`; `needs.minFootSpace_in2`; `needs.wheelchairSpace`; `needs.transferSeat`; `needs.movableArmrest`; `needs.excludeExitRow`; `rail.facing`; `rail.side`; `rail.quietCar`. If every applicable axis is already present, choose the first active tighten-able axis in this order: decrease `maxDistance_m`, decrease `priceMax_usd`, increase `needs.minFootSpace_in2`. The hint names the field and direction but invents no threshold value.
+- Zero matches is a successful query with `items: []`, `totalMatched: 0`, normalized `appliedCriteria`, and a deterministic relaxation `hint`. Choose the first active restriction in this order: set `availableOnly` to false; increase/remove `maxDistance_m`; increase/remove `priceMax_usd`; decrease/remove `needs.minFootSpace_in2`; remove the first active boolean `needs` flag in schema order; remove `rail.facing`, `rail.side`, then `rail.quietCar`; finally remove `near`. The hint names the field and relaxation direction but invents no value. `NO_MATCH` remains in the shared error vocabulary for use cases that require a singular match; query does not use it for an ordinary empty set.
 - `appliedCriteria` contains normalized defaults, including `availableOnly: true`, and unsupported criteria are rejected rather than ignored.
 - `maxDistance_m` without `near` is `INVALID_CRITERIA`; a domain-inapplicable block such as `hotel` while `domain === "rail"` is `UNSUPPORTED_CRITERIA`.
 
-Required query tests cover 0, 12, and 13+ matches; deterministic order across repeated runs; complete ties resolved by `ref`; truthful `totalMatched`; supported-axis hints; no pagination fields; and normalized defaults. Required compare tests cover 1/2/4/5 refs, duplicates, invalid refs, input-order preservation, and identical comparison axes.
+Required query tests cover 0, 12, and 13+ matches; deterministic order across repeated runs; complete ties resolved by `ref`; truthful `totalMatched`; hint-priority order; no pagination fields; and normalized defaults. Required compare tests cover 1/2/4/5 refs, duplicates, invalid refs, unavailable refs, input-order preservation, and identical comparison axes.
+
+Canonical derived result types are:
+
+```ts
+type CandidateBase = {
+  ref: string;
+  label: string;
+  line: string;
+  price_usd: number;
+  available: boolean;
+  features: string[];
+  distance?: { from: string; distance_m: number; rendered: string };
+};
+
+type Candidate = CandidateBase & (
+  | {
+      domain: "rail";
+      rail: {
+        row: number;
+        seatLetter: string;
+        side: "window" | "aisle";
+        facing: "forward" | "backward";
+      };
+      hotel?: never;
+      accessibility: {
+        wheelchairSpace: boolean;
+        transferSeat: boolean;
+        companionSeat: boolean;
+        movableArmrest: boolean;
+        footSpace_in2: number;
+        bulkhead: boolean;
+        exitRow: boolean;
+      };
+    }
+  | {
+      domain: "hotel";
+      hotel: {
+        floor: number;
+        bedToBathroom_m?: number;
+      };
+      rail?: never;
+      accessibility: Record<string, string | number | boolean | null>;
+    }
+);
+
+type Comparison = {
+  axes: { key: string; label: string }[];
+  rows: { ref: string; values: Record<string, string | number | boolean | null> }[];
+};
+```
+
+`Comparison.rows` preserves input-ref order, every row has the same keys as `axes`, and neither type contains legacy bare `price`, authored `steps`, bare `train`, or index-coupled value arrays. `compare` may include unavailable candidates and exposes their availability on the common comparison axis; only `select` rejects an unavailable ref with `NOT_AVAILABLE`.
 
 ### Data, route, rendering, state, and undo
 
@@ -148,20 +202,22 @@ Required query tests cover 0, 12, and 13+ matches; deterministic order across re
 - `Seat` must retain every PRD field, including all accessibility, service-animal decision, availability, pricing, direction, and feature fields. `QueryCriteria` must retain common, `needs`, `rail`, and `hotel` blocks and their validation rules.
 - `RenderOptions` must retain `units`, `stepLength_m`, `directionStyle`, and `walkSpeedPercent`, with explicit defaults and validity ranges. Authored data must not contain `steps`; `steps` is a presentation-only approximation derived from meters and accompanied by `unitsNote`.
 - Store direction as bearing plus reference frame. Relative, clock, and cardinal strings are presentation-boundary derivations.
-- `Route` must include complete structured segments, total length/time, landmarks, and rendered output. The algorithm must preserve real lateral seat-to-aisle movement and may not collapse a cross-aisle route to zero.
-- `AppState` must retain domain, layout, selection, confirmation status, active route, highlighted refs, tool log, history, and preferences. Every UI and tool projection must derive from this shared state.
+- `Route` must include complete structured segments, total length/time, landmarks, and rendered output. The algorithm must preserve real lateral seat-to-aisle movement and may not collapse a cross-aisle route to zero. After merging only contiguous collinear segments with identical mode and bearing, return at most four segments. If more remain, set `requestedTo` to the original destination, set `to` to the last stable landmark reachable within four segments, and return `requiresContinuation: true` plus `checkpoint: { ref, label }` whose `ref === to`; `totalLength_m` and `totalTraversalTime_s` equal the sums of the returned partial-leg segments only. A follow-up route uses `from: checkpoint.ref` and `to: requestedTo`. For a complete route, `requestedTo === to`, totals cover all segments, `requiresContinuation: false`, and `checkpoint` is absent.
+- `AppState` must retain domain, layout, selection, confirmation status, active route, highlighted refs, tool log, history, and preferences. Extend each `toolLog` entry to `{ name, args, appliedCriteria?, resultRefs, at }`, resolving the PRD UI4/AppState mismatch explicitly. Every UI and tool projection must derive from this shared state.
 - Undo must specify the exact snapshot fields, push timing, one-step restoration behavior, empty-history behavior, and behavior during pending or completed confirmation. Tests must prove selection, highlights, totals, status, and `undoable` restore coherently.
 - UI1–UI8 must each have a concrete component/behavior mapping and an acceptance test. Preserve CSS Grid, live referenced-seat highlighting, segment-derived SVG route overlay, tool log with arguments and `appliedCriteria`, persistent selection/price/status panel, keyboard plus ARIA grid/cell operation, focus-safe accessible confirmation dialog, and the unsupported-WebMCP banner.
+- UI6 requires human controls for the complete non-agent journey: an accessible filter form, route from/to controls, 2–4 candidate comparison selection, seat description/details, select and current-selection inspection, undo, units/direction/walk-speed preferences, and confirmation. These controls call the same Application use cases and produce the same state transitions and errors as WebMCP.
 
-The seven required route tests are exact acceptance cases, not examples that may be dropped:
+The eight required route tests are exact acceptance cases, not examples that may be dropped:
 
-1. `entrance_front → 6-12A`: longitudinal movement plus aisle-to-seat lateral movement and `countedFeatures.row = 6`;
+1. `entrance_front → 6-12A`: longitudinal movement plus aisle-to-seat lateral movement and `countedFeatures` containing `{ feature: "row", count: 6 }`;
 2. `6-12A → restroom`: seat-to-aisle lateral movement and landmark collection;
 3. `6-12A → 6-14D`: lateral–longitudinal–lateral three-segment route;
 4. `6-12A → 6-12D`: same-row cross-aisle route with `totalLength_m > 0`;
 5. `6-12A → 6-12B`: same-row, same-side direct movement when physically traversable;
-6. the same route rendered with all three `units` values: identical `segments`, changed `rendered` only; and
-7. `walkSpeedPercent: 50`: doubled `traversal_time_s` with unchanged `length_m`.
+6. the same route rendered with all three `units` values: identical `segments`, changed `rendered` only;
+7. `walkSpeedPercent: 50`: doubled `traversal_time_s` with unchanged `length_m`; and
+8. a raw route with more than four non-mergeable segments: no more than four returned segments; `requestedTo` remains the requested destination; `to === checkpoint.ref`; totals equal the returned segment sums; and `requiresContinuation: true` yields a valid follow-up route from the checkpoint to `requestedTo`.
 
 ### Landmark and portability contracts
 
@@ -203,20 +259,20 @@ Target-runtime integration tests must exercise confirm, cancel, timeout, per-cal
 - Outputs contain no DOM nodes, functions, class instances, circular references, `BigInt`, non-finite numbers, or other non-JSON values. Exact round-trip shape is a target-runtime integration test because WebMCP remains experimental.
 - Require a Secure Context, an origin-keyed document/agent cluster where applicable, and permission to use the `tools` Permissions Policy feature. Capability diagnostics must distinguish absence/unsupported, insecure context, `NotAllowedError`, `SecurityError`, and other registration failure.
 - Preserve top-level registration for the MVP. Cross-origin exposure and iframe registration are outside product scope even though the draft defines related mechanisms.
-- Use `readOnlyHint` only when a tool does not modify decision or persisted application state. Highlighting, route overlays, and logs are observable presentation effects; the Architecture must state this interpretation and verify target-host behavior rather than hiding those effects.
+- The draft defines `readOnlyHint: true` as modifying no state, not merely no decision state. Because UI2–UI4 require every tool call to update visible highlights, overlays, or the tool log, v0.3.2 applies an explicit WebMCP erratum to the PRD annotation matrix and uses `readOnlyHint: false` for all nine tools. Do not describe a state-changing call as read-only. A future tool may use `true` only if its execution produces no application, presentation, DOM, log, preference, or persisted state change.
 - Static, independently authored fixture output uses `untrustedContentHint: false`. Reassess each affected tool before accepting third-party or user-generated text/data.
 
 The Architecture must contain this explicit nine-tool annotation matrix and keep registration examples consistent with it:
 
 | Tool | `readOnlyHint` | `untrustedContentHint` |
 | --- | --- | --- |
-| `a11y.get_layout` | `true` | `false` |
-| `a11y.query` | `true` | `false` |
-| `a11y.describe` | `true` | `false` |
-| `a11y.get_route` | `true` | `false` |
-| `a11y.compare` | `true` | `false` |
+| `a11y.get_layout` | `false` | `false` |
+| `a11y.query` | `false` | `false` |
+| `a11y.describe` | `false` | `false` |
+| `a11y.get_route` | `false` | `false` |
+| `a11y.compare` | `false` | `false` |
 | `a11y.select` | `false` | `false` |
-| `a11y.get_selection` | `true` | `false` |
+| `a11y.get_selection` | `false` | `false` |
 | `a11y.undo` | `false` | `false` |
 | `a11y.confirm` | `false` | `false` |
 
@@ -230,13 +286,15 @@ Describe Bearing as **GTFS-Pathways-aligned**, not as a literal `pathways.txt` p
 | `traversal_time_s` | `traversal_time` (seconds) | Unit-explicit Bearing name with GTFS semantics |
 | `min_width_m` | `min_width` (meters) | Unit-explicit Bearing name with GTFS semantics |
 | `stair_count` | `stair_count` | Same name and directional-count semantics |
+| `max_slope` | `max_slope` | Same ratio semantics; optional because the single-level rail fixture generates no slope |
+| `signpostedAs` | `signposted_as` | Camel-case Bearing name preserving literal sign text semantics |
 | `pathway_mode: "walkway"` | `pathway_mode=1` | Human-readable Bearing representation of GTFS mode |
 | `pathway_mode: "stairs"` | `pathway_mode=2` | Human-readable Bearing representation of GTFS mode |
 | `pathway_mode: "elevator"` | `pathway_mode=5` | Human-readable Bearing representation of GTFS mode; type portability only in MVP |
 | `pathway_mode: "door"` | no GTFS Pathways value | Bearing extension |
 | `pathway_mode: "vestibule"` | no GTFS Pathways value | Bearing extension |
 
-Also identify `from`/`to`, `bearing`, `countedFeatures`, `landmarksPassed`, `landmarks`, `rendered`, and aggregate totals as Bearing fields rather than GTFS wire fields. This corrects the PRD phrase that the route uses GTFS names "as-is" while preserving its intent to reuse GTFS meanings. Do not imply that GTFS Pathways models passenger-vehicle interiors.
+Also identify `from`/`to`, `bearing`, `countedFeatures`, `landmarksPassed`, `landmarks`, `rendered`, `requiresContinuation`, `checkpoint`, and aggregate totals as Bearing fields rather than GTFS wire fields. `walkSpeedPercent` and `additionalTransferTime_s` are OSDM-aligned effort/connection semantics; only `walkSpeedPercent` changes per-segment walking time in the rail MVP, while `additionalTransferTime_s` remains an optional portability field and is not silently applied. This corrects the PRD phrase that the route uses GTFS names "as-is" while preserving its intent to reuse standards semantics. Do not imply that GTFS Pathways models passenger-vehicle interiors.
 
 ## Challenge Compliance and Evidence
 
@@ -245,11 +303,11 @@ Architecture must express the following as acceptance evidence, never as unsuppo
 - The project passes Stage One by fitting the human-agent open-web theme and using a genuine working WebMCP implementation.
 - Acceptance criteria map to all four equally weighted Stage Two criteria: WebMCP Leverage, Execution, Potential Impact, and Creativity & Ambition. Nine tools support a complete experience; tool count alone is not the achievement.
 - The intended target platform and testing instructions explicitly cover ChatGPT's in-app browser and Google Chrome 149 or later with the WebMCP testing flag enabled.
-- Judges receive an accessible working live URL. If authentication is used, credentials appear in testing instructions. The project remains free of charge and unrestricted for judging through the judging period.
+- Judges receive an accessible, unauthenticated working live URL. Bearing adds no account or login flow and remains free of charge and unrestricted for judging through the judging period.
 - The submission includes the required four-part written description: WebMCP fit, better UX, newly possible human-agent collaboration, and implementation approach.
-- The public repository contains all source code, assets, and functional/testing instructions, plus an open-source license detectable in the repository About area.
-- The demo is a public YouTube video under three minutes with a clear functioning demo and audio explaining the project and WebMCP use.
-- Submission materials are English or include the required English translations, including video, description, testing instructions, and all other submitted materials.
+- The public repository contains all source code, assets, and functional/testing instructions, plus the PRD-selected MIT license detectable in the repository About area.
+- The demo is a public YouTube video under three minutes with a clear functioning demo and audio explaining the project and WebMCP use. It preserves the PRD journey (`query → get_route → compare → select → confirm`), the unit-rendering demonstration, and the hotel mapping proof. It uses English narration/captions and no background music.
+- Submission materials, repository README/instructions, and product UI strings are English. If any submitted artifact is not English, provide the required English translation, including video, description, testing instructions, and all other submitted materials.
 - Project provenance states whether the project was created during the submission period. If any part pre-existed, documentation and dated evidence distinguish prior work from meaningful WebMCP work added during the period.
 - Every third-party dependency, SDK, API, dataset, image, font, audio track, and other asset has recorded provenance, license, and authorization basis. Third-party trademarks, copyrighted media, and unauthorized material do not appear in the UI, repository assets, or demo.
 - `intercity-car-6.json` and any before/after mockup are independently authored, unbranded synthetic fixtures/assets. They may use documented operational facts such as common 2+2 seating or aisle placement, with sources recorded, but may not reproduce a third-party diagram, layout artwork, screenshot, or proprietary dataset.
@@ -262,10 +320,10 @@ Verification must inspect exact contracts, not merely find tokens.
 
 ### Structural and traceability checks
 
-1. Confirm exactly 27 numbered Architecture sections in order and no lost section roles.
+1. Confirm exactly 27 numbered Architecture sections, §§1–27, in order; confirm the former §0 revision-summary role is preserved in an unnumbered preamble.
 2. Confirm every required traceability row has one disposition, target section, and evidence; no normative PRD subsection is unaccounted for.
 3. Confirm all nine tools appear exactly once in the canonical tool matrix and annotation matrix and that all examples/tests use the same names.
-4. Confirm UI1–UI8, the seven route tests, all four portability-proof elements, all four judging criteria, all submission artifacts, platform requirements, limitations, risks/open questions, and identity are present.
+4. Confirm UI1–UI8, the eight route tests, all four portability-proof elements, all four judging criteria, all submission artifacts, platform requirements, limitations, risks/open questions, and identity are present.
 5. Confirm no schedule, cut list, deadline triage, or implementation-completion claim entered Architecture.
 
 ### Exact schema and table checks
@@ -288,7 +346,7 @@ Verification must inspect exact contracts, not merely find tokens.
 ## Success Criteria
 
 - Architecture has no known v0.2.1 public contract outside clearly labeled migration/history notes.
-- All 27 sections, nine tools, PRD goals/non-goals, P1–P7, M1–M6/E1–E3 dispositions, complete schemas, UI1–UI8, seven route tests, portability proof, judging journey, platform facts, compliance evidence, limitations, risks/open questions, and identity are traceable.
+- Architecture has exactly §§1–27 plus an unnumbered revision preamble. All nine tools, PRD goals/non-goals, §4 standards relationships, P1–P7, M1–M6/E1–E3 dispositions, complete schemas, UI1–UI8, eight route tests, portability proof, judging journey, platform facts, compliance evidence, limitations, risks/open questions, and identity are traceable.
 - `query` and `compare` have distinct, deterministic cardinality contracts and exact boundary tests.
 - Confirmation is a same-call, 120-second, full-state, human-controlled contract with deterministic lock, abort, duplicate, timeout, and restoration behavior; there is no unverified public fallback.
 - WebMCP API claims match the current draft and remain separated from advisory host guidance.
