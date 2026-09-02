@@ -22,12 +22,16 @@
 - [x] 동기화 설계서를 작성하고 자체 검토한다.
 - [x] 재검증에서 확인된 confirmation·query/compare·GTFS·추적성·규정 공백을 동기화 설계서에 반영한다.
 - [x] 상세 구현 계획을 작성하고 자체 검토한다.
-- [ ] Architecture의 명칭·도메인·공간·Query·Landmark 계약을 교정한다.
-- [ ] WebMCP·상태·확정·UI 계약을 PRD 기준으로 교정한다.
-- [ ] 테스트·구조·구현 순서·ADR·성공 기준을 새 계약과 동기화한다.
-- [ ] 구형 토큰 제거와 필수 토큰 존재를 자동 검색으로 검증한다.
-- [ ] 독립 리뷰 결과를 반영하고 전체 diff를 검증한다.
+- [x] Architecture의 명칭·도메인·공간·Query·Landmark 계약을 교정한다.
+- [x] WebMCP·상태·확정·UI 계약을 PRD 기준으로 교정한다.
+- [x] 테스트·구조·구현 순서·ADR·성공 기준을 새 계약과 동기화한다.
+- [x] 구형 토큰 제거와 필수 토큰 존재를 자동 검색으로 검증한다.
+- [x] 독립 리뷰 결과를 반영하고 전체 diff를 검증한다.
 
 ### Review
 
-- 구현 완료 후 변경 요약과 검증 결과를 기록한다.
+- 변경 파일: `docs/Architecture.md`, `docs/contracts/bearing-output.schema.json`, 동기화 계획 및 이 작업 기록. `docs/PRD v0.3.md`는 변경하지 않았다.
+- 기준 우선순위: 공식 대회 규정·현행 WebMCP/GTFS 명세(규정/API 사실) → PRD v0.3(제품 의도·전체 범위) → 구 Architecture(충돌하지 않는 구현 상세).
+- 계약 결과: Bearing 명칭, 철도 MVP, 9개 `a11y.*` 도구, 미터 원본/파생 렌더링, Query 0/12/13+, Compare 2–4, 4-segment Route continuation, append-idempotent select, 1-step undo, same-call human confirmation, UI1–UI8, GTFS/호텔 portability, 대회 적격성·제출 증빙을 하나의 계약으로 동기화했다.
+- 검증 결과: 1–27 섹션 순서, 40개 fence 균형, 9개 도구 계약/예시/annotation과 UI1–UI8 행 수, 모든 JSON 코드·9개 예시 JSON 문법, 출력 스키마 `$ref` 해소, obsolete/placeholder 검색, `git diff --check`, PRD 무변경을 확인했다. 도메인과 WebMCP/UI/규정 영역의 독립 재검토는 모두 PASS였다.
+- 판정: 문서 계약 기준으로 구현 가능하고 대회 주제·필수 제출/적격성 규정에 부합한다. 다만 실제 ChatGPT/Chrome 호출, 120초 same-call confirmation, 접근성 실행 시험, 배포·참가자 개별 적격성·제출 완료는 구현 후 별도 증거가 필요한 상태이며 문서도 이를 완료로 주장하지 않는다.
