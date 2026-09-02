@@ -9,20 +9,17 @@ import { usecases } from "../app/usecases.ts";
 import { store } from "../app/store.ts";
 import { assertCapable } from "./capability.ts";
 
-type ToolResult<T> = { value: T } | { error: { code: string; message: string } };
-
-type ToWireResult = {
+type ToolResult<T> = {
   ok: boolean;
-  data?: unknown;
-  error?: { code: string; message: string };
+  data?: T;
   hint?: string;
+  error?: { code: string; message: string };
 };
 
-function toWire<T>(result: ToolResult<T>, hint?: string): ToWireResult {
-  if ("value" in result) {
-    return { ok: true, data: result.value, ...(hint && { hint }) };
-  }
-  return { ok: false, error: result.error };
+type ToWireResult = ToolResult<unknown>;
+
+function toWire<T>(result: ToolResult<T>): ToWireResult {
+  return result;
 }
 
 const renderOptionsSchema = {
@@ -215,9 +212,7 @@ export async function handleToolCall(
 
       case "a11y.query": {
         const criteria = (input as any).criteria;
-        const result = usecases.query(criteria, opts);
-        const hint = "value" in result ? result.value.hint : undefined;
-        return toWire(result, hint);
+        return toWire(usecases.query(criteria, opts));
       }
 
       case "a11y.describe":

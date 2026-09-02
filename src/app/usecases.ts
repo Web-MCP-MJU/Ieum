@@ -19,19 +19,24 @@ export type ToolErrorCode =
   | "NOTHING_TO_UNDO"
   | "CONFIRMATION_REQUIRED";
 
-export type ToolResult<T> = { value: T } | { error: { code: ToolErrorCode; message: string } };
+export type ToolResult<T> = {
+  ok: boolean;
+  data?: T;
+  hint?: string;
+  error?: { code: ToolErrorCode; message: string };
+};
 
-type ToolOk<T> = (value: T) => ToolResult<T>;
-type ToolErr = (code: ToolErrorCode, message: string) => ToolResult<never>;
-
-const ok: ToolOk<any> = (value) => ({ value });
-const err: ToolErr = (code, message) => ({ error: { code, message } });
+const ok = <T,>(data: T, hint?: string): ToolResult<T> => ({ ok: true, data, ...(hint && { hint }) });
+const err = (code: ToolErrorCode, message: string): ToolResult<never> => ({
+  ok: false,
+  error: { code, message },
+});
 
 const getLayout = (opts?: RenderOptions): ToolResult<LayoutSummary> => {
   const layout = car6;
   store.addLog("a11y.get_layout", opts);
 
-  return ok({
+  const data: LayoutSummary = {
     domain: layout.domain,
     layoutId: layout.layoutId,
     bounds_m: layout.bounds_m,
@@ -47,7 +52,9 @@ const getLayout = (opts?: RenderOptions): ToolResult<LayoutSummary> => {
     landmarks: layout.landmarks,
     referencePoints: layout.landmarks.map((l) => l.key),
     summary: `${layout.seats.length} seats: ${layout.seats.filter((s) => s.available).length} available`,
-  });
+  };
+
+  return ok(data);
 };
 
 export type QueryOutput = {
@@ -67,7 +74,7 @@ const querySeats = (criteria: QueryCriteria, opts?: RenderOptions): ToolResult<Q
   }
 
   store.highlight(result.items.map((item) => item.ref));
-  return ok(result);
+  return ok(result, result.hint);
 };
 
 export type DescriptionOutput = {
@@ -113,7 +120,7 @@ const describe = (
     };
   });
 
-  return ok({
+  const data: DescriptionOutput = {
     ref: input.ref,
     line: `Seat ${seat.ref} – ${seat.side}, ${seat.facing}, $${seat.price_usd}`,
     attributes: {
@@ -131,7 +138,9 @@ const describe = (
       "Show me nearby seats",
       "Compare with another seat",
     ],
-  });
+  };
+
+  return ok(data);
 };
 
 export type RouteOutput = Route;
@@ -149,7 +158,7 @@ const getRoute = (
   }
 
   store.setRoute(result);
-  return ok(result);
+  return ok(result, result.rendered.summary);
 };
 
 export type ComparisonOutput = Comparison;
@@ -166,7 +175,7 @@ const compareSeats = (
     return err(result.code, result.message);
   }
 
-  return ok(result);
+  return ok(result, `Comparing ${input.refs.length} seats`);
 };
 
 export type SelectionOutput = { selected: SpatialRef[] };
@@ -174,7 +183,7 @@ export type SelectionOutput = { selected: SpatialRef[] };
 const getSelection = (): ToolResult<SelectionOutput> => {
   store.addLog("a11y.get_selection", null);
   const state = store.getState();
-  return ok({ selected: state.selection });
+  return ok({ selected: state.selection }, state.selection.length > 0 ? `${state.selection.length} seat(s) selected` : "No selection yet");
 };
 
 export type SelectOutput = { selectedRef: SpatialRef };
@@ -190,7 +199,7 @@ const select = (input: { ref: SpatialRef }): ToolResult<SelectOutput> => {
 
   store.select(input.ref);
   store.setConfirmationStatus("draft");
-  return ok({ selectedRef: input.ref });
+  return ok({ selectedRef: input.ref }, `Selected ${input.ref}`);
 };
 
 export type UndoOutput = { undone: boolean };
@@ -203,7 +212,7 @@ const undo = (): ToolResult<UndoOutput> => {
     return err("NOTHING_TO_UNDO", "No selection to undo");
   }
 
-  return ok({ undone: true });
+  return ok({ undone: true }, "Selection cleared");
 };
 
 export type ConfirmOutput = { outcome: "confirmed" | "cancelled" };
@@ -228,10 +237,10 @@ const confirm = async (): Promise<ToolResult<ConfirmOutput>> => {
       const currentState = store.getState();
       if (currentState.confirmationStatus === "confirmed") {
         clearTimeout(timeout);
-        resolve(ok({ outcome: "confirmed" }));
-      } else if (currentState.confirmationStatus === "draft") {
+        resolve(ok({ outcome: "confirmed" }, "Booking confirmed"));
+      } else if (currentState.confirmationStatus === "cancelled") {
         clearTimeout(timeout);
-        resolve(ok({ outcome: "cancelled" }));
+        resolve(ok({ outcome: "cancelled" }, "Booking cancelled"));
       }
     };
 
