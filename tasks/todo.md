@@ -10,8 +10,25 @@
 - [x] `feat/bearing-demo` 격리 작업공간을 만든다.
 - [x] root `DESIGN.md`와 웹사이트 구현 설계서를 작성한다.
 - [x] 디자인 토큰, 대비, 포맷 및 설계서 일관성을 자체 검토한다.
-- [ ] 사용자가 작성된 설계서를 검토하고 구현 계획 진행을 승인한다.
+- [x] 사용자가 작성된 설계서를 검토하고 구현 계획 진행을 승인한다.
+- [x] canonical `RailFixture` 타입·JSON Schema·무결성 검증 계약을 추가한다.
+- [x] confirmation의 두 원자적 전환과 observable tool-call lifecycle을 명시한다.
+- [x] 9개 WebMCP 등록 실패의 전체 rollback 계약과 테스트를 명시한다.
+- [x] 좌석 그리드 키보드 동작과 겹치는 시각 상태의 우선순위를 확정한다.
+- [x] 반응형 breakpoint, 모바일 comparison, 초기 화면 상태의 모호성을 제거한다.
+- [x] 필수 컴포넌트·상태·forced-colors 디자인 토큰과 접근성 검증을 보강한다.
+- [x] 고정 toolchain, 빌드/배포 산출물, 보안 헤더, 증거 manifest 및 자산 검증을 명시한다.
+- [x] `quietCar` breaking contract의 Architecture/schema 버전을 v0.3.3으로 올린다.
+- [x] 공식 DESIGN.md 린트·JSON Schema·문서 구조·독립 재검토를 통과한다.
 - [ ] 승인된 설계에서 상세 구현 계획을 작성한다.
+
+### 설계 교정 Review
+
+- 계약: `RailFixture` v1 schema와 교차 필드 validator, 호출 lifecycle, confirmation open/terminal 전환, 9-position registration rollback을 구현 가능한 수준으로 고정했다.
+- UI: 60개 gridcell의 정확한 키보드 규칙, unavailable 처리, 상태 합성 순서, 1216/760 breakpoint, 모바일 comparison/JSON wrapping을 확정했다.
+- 디자인/접근성: 19 colors·30 components, control/log 상태 매핑, forced-colors, 200%/400% zoom, 320px reflow, text-spacing, font/icon/license 검증을 명시했다.
+- 재현성: Node/npm 및 Sites 버전, clean-install 검증 명령, Vinext 산출물, 보안 헤더, 동일 출처 요청 인벤토리, runtime evidence manifest를 고정했다.
+- 검증: 공식 `@google/design.md@0.2.0`은 errors 0/warnings 0, 두 Draft 2020-12 JSON Schema는 AJV compile 통과, Architecture §1–27·fence 균형·`git diff --check`를 확인했다.
 
 ## 기본 Git 제외 규칙
 

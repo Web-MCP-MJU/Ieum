@@ -1,4 +1,4 @@
-# Bearing Architecture v0.3.2 — Spatial Accessibility Bridge
+# Bearing Architecture v0.3.3 — Spatial Accessibility Bridge
 
 **Product contract:** `docs/PRD v0.3.md`
 
@@ -6,7 +6,7 @@
 
 **Document role:** implementation-ready architecture and acceptance contract; it does not claim that implementation, runtime integration, accessibility validation, deployment, or submission is complete.
 
-This revision replaces the v0.3.1 public contract. Bearing is the selected project name; the only implemented MVP domain is `rail`; the independently authored fixture is `data/intercity-car-6.json`, its unbranded `layoutId` is `Car 6, Business Class`, and all prices are USD. The former numbered revision summary is retained here as an unnumbered preamble so the architecture has exactly §§1–27.
+This revision replaces the v0.3.2 public contract. v0.3.3 is a breaking contract revision because `Seat.quietCar` and `Candidate.rail.quietCar` are now required factual fields rather than an untraceable query-only criterion. Bearing is the selected project name; the only implemented MVP domain is `rail`; the independently authored fixture is `site/src/data/intercity-car-6.json`, its unbranded `layoutId` is `Car 6, Business Class`, and all prices are USD. The former numbered revision summary is retained here as an unnumbered preamble so the architecture has exactly §§1–27.
 
 Authority, in descending order:
 
@@ -153,6 +153,59 @@ type Seat = {
 `Seat` exposes individual decision facts rather than an opaque `accessible` boolean. Wheelchair, transfer, companion, armrest, service-animal foot-space, bulkhead, and exit-row facts remain separately interrogable.
 
 `quietCar` is an explicitly authored rail fact, not an inference from price, class, or label. Fixture loading copies one validated car-level value to every canonical seat; `rail.quietCar: true` and `false` compare against that boolean exactly, and `Candidate.rail.quietCar` preserves the fact in results.
+
+The authored-file boundary is a separate, versioned contract. `quietCar` occurs once at car level and is copied into canonical seats only after validation:
+
+```ts
+type FixtureSeat = Omit<Seat, "quietCar">;
+
+type FixtureReferencePoint = {
+  ref: string;
+  label: string;
+  position_m: { x: number; y: number };
+  kind: "entrance" | "restroom" | "service" | "connector";
+  stableCheckpoint: boolean;
+};
+
+type FixtureAisleAnchor = {
+  ref: string;
+  label: string;
+  position_m: { x: number; y: number };
+  row: number;
+  stableCheckpoint: boolean;
+};
+
+type FixtureEdge = {
+  id: string;
+  from: string;
+  to: string;
+  bidirectional: boolean;
+  traversable: true;
+  pathway_mode: "walkway" | "stairs" | "elevator" | "door" | "vestibule";
+  length_m: number;
+  stair_count?: number;
+  min_width_m?: number;
+  max_slope?: number;
+  signpostedAs?: string;
+  bearing: { frame: "car_axis"; degrees: number };
+};
+
+type RailFixture = {
+  schemaVersion: "bearing.rail-fixture.v1";
+  domain: "rail";
+  layoutId: string;
+  authoringSource: "independently_authored_synthetic";
+  bounds_m: { length: number; width: number };
+  car: { quietCar: boolean };
+  seats: FixtureSeat[];
+  landmarks: Landmark[];
+  referencePoints: FixtureReferencePoint[];
+  aisleAnchors: FixtureAisleAnchor[];
+  pathEdges: FixtureEdge[];
+};
+```
+
+The machine-valid Draft 2020-12 source contract is [bearing-rail-fixture.schema.json](./contracts/bearing-rail-fixture.schema.json). Bootstrap validates schema first, then cross-field invariants before creating Domain state: exactly 60 seats and 47 available; one shared unique ref namespace across seats, landmark keys, reference points, and aisle anchors; unique edge IDs; finite coordinates inside bounds; valid non-self edge endpoints; positive edge length; only `traversable: true` edges admitted; every seat and required landmark reachable from `entrance_front`; no duplicate row/seat-letter pair; and all public authored text within schema bounds. For every ordered pair of routable seat, landmark, reference-point, and aisle-anchor refs, the validator also simulates §7 continuation after merge: a route longer than four segments must have a non-origin `stableCheckpoint` reference-point or aisle-anchor endpoint within segments 1–4 that strictly decreases remaining path length; choosing the furthest such endpoint must make each successive leg progress, never reuse a checkpoint, and terminate at the requested destination within the finite graph. A malformed fixture renders the bootstrap error state and registers zero tools.
 
 ```ts
 type LandmarkType =
@@ -410,7 +463,7 @@ type Route = {
 };
 ```
 
-`bearing.degrees` is finite and normalized to `[0, 360)`. In `car_axis`, `0` is the authored forward end of the car; in `egocentric`, `0` is the traveler’s incoming heading. Relative, clock, and cardinal instructions are derived only after this frame is known.
+`bearing.degrees` is finite and normalized to `[0, 360)`. Every fixture edge authors one `car_axis` bearing for its `from → to` direction, where `0` is the authored forward end of the car. A bidirectional reverse traversal derives `(degrees + 180) % 360`; an unidirectional edge cannot be traversed in reverse. `egocentric` exists only in returned `RouteSegment` rendering after the traveler's incoming heading is known; it is never fixture input. Relative, clock, and cardinal instructions are derived only after this frame is known.
 
 `additionalTransferTime_s` is an optional OSDM-aligned portability fact outside the rail `Route` result; the rail MVP does not author or silently apply it. `walkSpeedPercent` alone scales rail walking time:
 
@@ -424,10 +477,10 @@ Algorithm:
 2. If the origin is off-aisle, add its real lateral path to the same-row aisle anchor.
 3. Move longitudinally along the aisle to the destination row, recording exact counted rows and encountered landmarks.
 4. If the destination is off-aisle, add its real lateral path from the aisle anchor. A same-row, same-side direct path may be used only when the fixture marks it physically traversable.
-5. Calculate bearings, modes, lengths, widths/slopes/sign text when authored, and walking times.
+5. Calculate directed bearings, modes, lengths, widths/slopes/sign text when authored, and derive walking times from `length_m` and the call's effective `walkSpeedPercent`; fixture data never authors traversal time.
 6. Merge only contiguous, collinear segments with identical `pathway_mode` and bearing.
 7. If at most four segments remain, return a complete route: `requestedTo === to`, `requiresContinuation: false`, no `checkpoint`, and aggregate totals equal every segment sum.
-8. If more than four remain, end at the last stable landmark reachable within four segments. Keep the original destination in `requestedTo`; set `to` and `checkpoint.ref` to that stable ref; set `requiresContinuation: true`; and make totals equal only the returned partial-leg segment sums. The next call uses `{ from: checkpoint.ref, to: requestedTo }`.
+8. If more than four remain, choose the furthest non-origin segment endpoint among segments 1–4 whose reference point or aisle anchor has `stableCheckpoint: true` and that strictly reduces the remaining path length. Keep the original destination in `requestedTo`; set `to` and `checkpoint.ref` to that stable ref; set `requiresContinuation: true`; and make totals equal only the returned partial-leg segment sums. The next call uses `{ from: checkpoint.ref, to: requestedTo }`. Fixture validation guarantees repeated continuation never returns the same checkpoint, strictly progresses, and terminates; runtime violation is an unexpected programming/fixture failure, never a partial success.
 9. Derive the requested rendering without changing `segments`.
 
 A cross-aisle route such as `6-12A → 6-12D` cannot collapse to zero. Projecting both endpoints to the aisle before recording lateral movement is forbidden.
@@ -761,6 +814,27 @@ type UndoSnapshot = {
   activeRoute: Route | null;
 };
 
+type ToolCallStatus =
+  | "pending"
+  | "succeeded"
+  | "domain_failed"
+  | "cancelled"
+  | "rejected";
+
+type ToolLogEntry = {
+  callId: string;
+  origin: "agent" | "human";
+  name: `a11y.${string}`;
+  args: Record<string, unknown>;
+  appliedCriteria?: QueryCriteria;
+  resultRefs: string[];
+  status: ToolCallStatus;
+  startedAt: number;
+  completedAt?: number;
+  errorCode?: ToolErrorCode;
+  outcome?: "confirmed" | "cancelled" | "timeout";
+};
+
 type AppState = {
   domain: "rail" | "hotel";
   layoutId: string;
@@ -768,13 +842,7 @@ type AppState = {
   confirmationStatus: "draft" | "confirmation_pending" | "confirmed";
   activeRoute: Route | null;
   highlightedRefs: string[];
-  toolLog: {
-    name: string;
-    args: Record<string, unknown>;
-    appliedCriteria?: QueryCriteria;
-    resultRefs: string[];
-    at: number;
-  }[];
+  toolLog: ToolLogEntry[];
   history: UndoSnapshot[];
   prefs: RenderOptions;
 };
@@ -782,23 +850,25 @@ type AppState = {
 
 Initial state is `domain: "rail"`, `layoutId: "Car 6, Business Class"`, empty selection/highlights/history/log, `confirmationStatus: "draft"`, `activeRoute: null`, and normalized preferences `{ units: "feet", stepLength_m: 0.75, directionStyle: "relative", walkSpeedPercent: 100 }`.
 
-UI preference controls update `prefs`; an explicit per-call `RenderOptions` value overrides the session default for that call without creating a new public tool. Tool log records normalized `appliedCriteria` for query, exact input arguments, result refs in result order, and a timestamp. Every UI and tool projection reads this state; no duplicate Agent-only store exists.
+After validated construction and before first paint, bootstrap invokes human-originated `get_layout({})` and `query({ availableOnly: true })`. The initial visible projection therefore contains the layout facts, the first 12 deterministically ordered available results, applied defaults, highlights for those result refs, and two completed log entries; selection/history remain empty. These are ordinary Application calls, not fixture-specific UI shortcuts.
+
+UI preference controls update `prefs`; an explicit per-call `RenderOptions` value overrides the session default for that call without creating a new public tool. Every human or Agent use case allocates a collision-resistant `callId` and appends one `pending` entry before execution. That same entry receives exactly one terminal update: `succeeded` (including a valid empty query), `domain_failed`, `cancelled`, or `rejected`, with completion time and applicable fixed error/outcome. Confirmation remains `pending` while its dialog is open. The visible log renders a safe length-bounded projection, while the in-memory record keeps exact schema-valid arguments, normalized query criteria, and ordered result refs. Every UI and tool projection reads this state; no duplicate Agent-only store exists.
 
 `select(ref)` has append-idempotent semantics. A valid available ref not already selected pushes one snapshot, appends the ref once, and returns it as `selectedRef`. Selecting an already-selected ref succeeds with the same single occurrence, updates only the observable log/highlight projection, pushes no snapshot, and leaves price/count/history unchanged. Invalid or unavailable refs fail with full unchanged state and push no snapshot. Selection never toggles or replaces another ref implicitly.
 
 ## 13. Human confirmation boundary
 
-`a11y.confirm` is one asynchronous call with a human-controlled terminal event, not a two-call polling protocol.
+`a11y.confirm` is one unresolved asynchronous call containing two atomic Application state transitions, not one long state transaction and not a two-call polling protocol.
 
 1. Preconditions: `confirmationStatus === "draft"` and `selection.length > 0`.
-2. Capture the pre-confirm snapshot, set `confirmationStatus` to `confirmation_pending`, open the accessible in-page dialog, move focus safely, and start a 120-second timer.
+2. **Open transition:** atomically capture the private pre-confirm snapshot, set `confirmationStatus` to `confirmation_pending`, append/update the call log as `pending`, and publish the dialog-open projection. Then move focus safely and start a 120-second timer.
 3. While pending, `select`, `undo`, and duplicate `confirm` fulfill with `CONFIRMATION_REQUIRED` plus unchanged full state. Read operations and `get_selection` remain available.
-4. The first terminal event wins once:
+4. **Terminal transition:** the first terminal event wins once and atomically updates application state, visible projection, and the same tool-log entry:
    - human Confirm → `{ outcome: "confirmed" }`, status `confirmed`;
    - human Cancel → `{ outcome: "cancelled" }`, restore pre-confirm selection, highlights, route, and `draft` status;
    - 120-second timeout → `{ outcome: "timeout" }`, perform the same restoration.
 5. Per-call `options.signal` abort, document teardown, or unexpected dialog failure closes the dialog, removes timer/listeners, restores the pre-confirm snapshot, restores focus if the document remains active, and rejects/cancels the execution. Agent abort is never reported as human `cancelled`.
-6. Terminal resolution is guarded by a single idempotent settle operation. Racing UI actions and late callbacks cannot settle twice, reopen the dialog, or overwrite terminal state.
+6. Terminal resolution is guarded by a single idempotent settle operation. Racing UI actions and late callbacks cannot settle twice, reopen the dialog, or overwrite terminal state. No partially visible state exists within either transition; the browser event loop may run between the open and terminal transitions while the call promise remains unresolved.
 
 There is no public `confirmation_pending` outcome and no early return that asks the Agent to poll. Blocking execution is an Application contract implemented with a promise; it is not described as a standardized WebMCP user-interaction primitive. If either target runtime cannot sustain the contract, evidence is recorded as an open blocker and any public change requires a separately versioned technical erratum.
 
@@ -875,6 +945,8 @@ type WebMCPCapability =
 
 Registration requires a Secure Context, an origin-keyed document/agent cluster where applicable, and `tools` Permissions Policy permission. MVP registration is top-level only; iframe and cross-origin exposure are outside scope. Aborting the registration controller removes all nine tools. Domain/state changes do not re-register them.
 
+Registration is all-or-nothing. Bootstrap first validates the complete fixture and constructs all nine static definitions without touching `document.modelContext`. It then registers them in the canonical §10 order under one registration controller. If registration at position 1–9 rejects, bootstrap aborts that controller, awaits cleanup, verifies that none of the names remain discoverable, records one capability failure, and exposes zero Bearing tools. A retry starts with a fresh controller and a fresh nine-definition set; it never continues a partially successful loop. Controlled-adapter tests inject a rejection at every registration position and assert zero discoverable tools, no leaked listeners, one stable capability classification, and successful clean retry.
+
 Target-runtime evidence is required from both ChatGPT’s in-app browser and Google Chrome 149 or later with the WebMCP testing flag enabled.
 
 ## 16. Tool annotations
@@ -904,7 +976,7 @@ The UI is a complete non-Agent client of Application, not a visualization shell 
 | UI1 | `RailSeatGrid`: CSS Grid generated from fixture positions | Grid geometry and labels match the same seats consumed by Domain; no copied operator artwork |
 | UI2 | Shared `highlightedRefs` style for every ref touched by a tool or human use case | A live query/describe/compare/select call highlights exactly `resultRefs`; focus indication remains distinct |
 | UI3 | `RouteOverlay`: SVG generated only from `activeRoute.segments` | Overlay endpoints/bearings match segments; UI performs no route calculation; continuation ends at checkpoint |
-| UI4 | `ToolLogPanel`: tool name, exact args, normalized `appliedCriteria`, result refs, timestamp | Query log visibly distinguishes requested args from applied defaults; failed calls remain diagnosable |
+| UI4 | `ToolLogPanel`: call ID/origin, tool name, safe args projection, normalized `appliedCriteria`, result refs, lifecycle status, start/completion times, fixed error/outcome | Query log visibly distinguishes requested args from applied defaults; empty success, domain failure, pending confirmation, cancellation, and rejection remain distinguishable |
 | UI5 | Persistent `SelectionPanel`: selected refs, USD total, and confirmation status | Values equal the `SelectionState` selectors after select, failure, undo, cancel, timeout, and confirm |
 | UI6 | Complete keyboard/ARIA human workflow | With WebMCP disabled, a keyboard/screen-reader user can filter, describe, route, compare, select, inspect selection, undo, change preferences, and confirm |
 | UI7 | `ConfirmationDialog`: focus-safe, `role="dialog"`, `aria-modal="true"`, explicit Confirm/Cancel, Escape cancellation | Only human activation produces confirmed; focus enters safely and returns after every terminal/abort path |
@@ -921,7 +993,9 @@ UI6 requires all of these visible, labeled controls:
 - units, step length, direction style, and walk-speed preferences; and
 - confirmation.
 
-`RailSeatGrid` has a programmatic name and `role="grid"`; each visual row has `role="row"`, and each seat has `role="gridcell"` with position, availability, USD price, direction, side, and relevant accessibility facts in its accessible name/description. It uses roving `tabindex`: exactly one enabled gridcell is `0`, all other enabled gridcells are `-1`, arrows move spatially, Home/End move within the row, and Tab enters or leaves the grid without trapping focus. Selection state uses `aria-selected` and is not conflated with keyboard focus.
+`RailSeatGrid` has a programmatic name and `role="grid"`; each visual row has `role="row"`, and all 60 seats—including unavailable seats—have `role="gridcell"` with position, availability, USD price, direction, side, and relevant accessibility facts in their accessible name/description. Exactly one cell has `tabindex="0"`; the other 59 have `-1`. Tab enters at the current active cell and the next Tab leaves the grid. Left/Right moves to the nearest seat in the same row across the aisle without wrapping. Up/Down moves to the same seat letter in the adjacent row, or the nearest x-coordinate when that letter is absent, without wrapping. Home/End moves to the first/last seat in the current row. Enter sets the active ref and opens its description. Space invokes append-idempotent selection only when available. An unavailable cell remains focusable, exposes `aria-disabled="true"`, and Space causes no domain mutation while a concise polite explanation is announced. `aria-selected` reflects actual selection and is never conflated with focus, route, transient highlight, or comparison choice.
+
+Visual composition follows one fixed order: base availability surface; route marker; selected fill/check; transient result highlight; keyboard focus ring. Later layers do not erase the text/pattern/marker of earlier semantic states. The route stays identifiable on a selected seat, an unavailable seat never appears selectable, and focus remains the outermost visible indicator in normal and forced-colors modes.
 
 `ConfirmationDialog` has `role="dialog"`, `aria-modal="true"`, and an accessible name through `aria-labelledby` (or a nonempty `aria-label` fallback). While open, content outside the dialog is `inert`; focus starts on the least destructive sensible control, cycles only within the dialog, Escape cancels, and every terminal/abort path removes `inert` and restores focus to the invoker when it still exists. A concise `role="status"`, `aria-live="polite"`, `aria-atomic="true"` announcer reports meaningful state changes, not the entire tool log. Agent-originated changes are tested for duplicate speech before any suppression policy is adopted.
 
@@ -1047,12 +1121,13 @@ Each eval records chosen tool, exact arguments, result refs, omitted or invented
 
 ### 21.2 Application and state tests
 
-- Every use case produces the §8 log/highlight/route effects atomically.
+- Every non-confirmation use case produces its defined §8 log/highlight/route effects in one atomic transition; confirmation produces exactly one atomic open transition and one atomic terminal transition under one unresolved call ID.
 - `selectedCount` and `priceTotal_usd` always re-derive from `selected`.
 - Select pushes exactly one complete snapshot; failure pushes none.
 - Undo success/failure/lock restores state coherently.
 - Preferences use session defaults and per-call override precedence.
 - Query log stores requested args plus normalized `appliedCriteria`.
+- Every call log progresses from `pending` to exactly one terminal status and distinguishes successful-empty, expected domain failure, cancellation, and rejection.
 
 ### 21.3 Confirmation tests
 
@@ -1061,6 +1136,7 @@ Exercise confirm, cancel, 120-second timeout, per-call abort, document teardown,
 ### 21.4 WebMCP Adapter tests
 
 - Register exactly nine tools with exact names, schemas, and §16 annotations.
+- Inject registration rejection independently at positions 1–9; each case leaves zero discoverable tools/listeners, one stable capability diagnosis, and permits a clean nine-tool retry with a fresh controller.
 - Keep registration and execution signals distinct.
 - Diagnose unsupported, insecure, permission denial, security rejection, and other registration failure separately.
 - Return the plain `ToolResult` shape and verify exact JSON round-trip.
@@ -1070,12 +1146,14 @@ Exercise confirm, cancel, 120-second timeout, per-call abort, document teardown,
 ### 21.5 Accessibility and progressive-enhancement tests
 
 - Complete the whole UI6 journey with WebMCP disabled, keyboard only, and screen reader.
-- Inspect the accessibility tree for a named grid with row/gridcell ownership, one roving tab stop, correct `aria-selected`, cell names/descriptions, arrow/Home/End navigation, Tab escape, focus visibility, and live status.
+- Inspect the accessibility tree for a named grid with 60 owned gridcells, one roving tab stop, correct `aria-selected`/`aria-disabled`, cell names/descriptions, exact non-wrapping arrow and Home/End navigation, Enter description, available/unavailable Space behavior, Tab escape, composited state cues, focus visibility, and live status.
 - Verify SVG overlay/state without requiring vision to understand the route.
 - Open confirmation from Agent and human controls; inspect its accessible name/modal state and test outside-content `inert`, focus entry/trap, Escape, terminal action, `inert` removal, and restoration.
 - Send markup-, script-, URL-, CSS-, and ARIA-ID-shaped values through args, refs, fixture labels/sign text, logs, status messages, and errors; assert text-only rendering and no DOM or accessibility-tree injection.
 - Complete a monitor-off engineering walkthrough through confirmation.
 - Check Agent speech and live-region speech for harmful duplication.
+- Exercise 200%/400% zoom, 320 CSS px reflow, WCAG text-spacing overrides, Chromium forced-colors emulation, and a real Windows high-contrast walkthrough; assert no lost content, two-dimensional scrolling, clipped focus, or color-only state.
+- Verify bundled Atkinson 400/700 through `document.fonts`, bundled Lucide SVG delivery, system-font/text-only fallbacks, same-origin runtime request inventory, and installed-license-file agreement with `THIRD_PARTY_NOTICES.md`.
 
 These are engineering tests, not participant research. Direct blind-user validation has not occurred.
 
@@ -1087,49 +1165,35 @@ These are engineering tests, not participant research. Direct blind-user validat
 - Context-aware stale-token and contradiction scans described in the synchronization design.
 - `git diff --check` and complete diff review before handoff.
 
+### 21.7 Reproducible build and deployment checks
+
+- Use Node 24 LTS, npm 11, `create-sites@0.3.0`, exact direct-dependency versions, and a committed npm lockfile.
+- From `site/`, run `npm ci`, then `npm run design:lint`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e`, and `npm run build`.
+- Require `site/dist/server/index.js`, `site/dist/assets/`, and `site/dist/.openai/hosting.json`; the staged hosting manifest must byte-match the reviewed `site/.openai/hosting.json`.
+- Verify the deployed top-level HTTPS response sends `Permissions-Policy: tools=(self)`, `Origin-Agent-Cluster: ?1`, a CSP without `unsafe-inline` or `unsafe-eval`, and `X-Content-Type-Options: nosniff`.
+- Record commit SHA, URL, UTC timestamp, runtime versions, headers, request inventory, discovered tools, call lifecycle/outcomes, and evidence paths in `docs/evidence/demo-runtime.json`.
+
 ## 22. Project structure
 
 ```text
-src/
-├─ app/
-│  ├─ bootstrap.ts
-│  └─ app.ts
-├─ domain/
-│  ├─ spatial/
-│  │  ├─ types.ts
-│  │  ├─ route-engine.ts
-│  │  ├─ query-engine.ts
-│  │  ├─ comparison-engine.ts
-│  │  └─ rendering.ts
-│  └─ rail/
-│     ├─ rail-domain.ts
-│     └─ rail-types.ts
-├─ application/
-│  ├─ use-cases.ts
-│  ├─ confirmation-coordinator.ts
-│  └─ errors.ts
-├─ bridge/
-│  ├─ contracts.ts
-│  ├─ schemas.ts
-│  ├─ handlers.ts
-│  ├─ presenter.ts
-│  └─ state-projector.ts
-├─ adapters/webmcp/
-│  ├─ register-tools.ts
-│  ├─ capability.ts
-│  └─ lifecycle.ts
-├─ state/
-│  ├─ app-store.ts
-│  └─ selectors.ts
-├─ ui/
-│  ├─ rail-seat-grid.ts
-│  ├─ controls.ts
-│  ├─ route-overlay.ts
-│  ├─ panels.ts
-│  ├─ confirmation-dialog.ts
-│  └─ capability-banner.ts
-├─ data/
-│  └─ intercity-car-6.json
+site/
+├─ package.json
+├─ package-lock.json
+├─ .openai/hosting.json
+├─ public/og.png
+├─ src/
+│  ├─ app/
+│  │  ├─ bootstrap.ts
+│  │  └─ app.ts
+│  ├─ domain/
+│  │  ├─ spatial/
+│  │  └─ rail/
+│  ├─ application/
+│  ├─ bridge/
+│  ├─ adapters/webmcp/
+│  ├─ state/
+│  ├─ ui/
+│  └─ data/intercity-car-6.json
 └─ tests/
    ├─ domain/
    ├─ application/
@@ -1137,6 +1201,11 @@ src/
    ├─ webmcp/
    ├─ agent-evals/
    └─ accessibility/
+docs/
+├─ contracts/
+│  ├─ bearing-output.schema.json
+│  └─ bearing-rail-fixture.schema.json
+└─ evidence/demo-runtime.json
 ```
 
 The Bridge is a logical boundary, not a mandate for one file per tool. Hotel proof belongs in specification documentation, not an unused runtime adapter.
@@ -1185,7 +1254,7 @@ Hotel remains a specification proof throughout these gates. Adding a runtime hot
 
 **ADR-014 — Undo is one-step snapshot restoration.** It restores selection, highlights, status, and route atomically.
 
-**ADR-015 — Every tool annotation is truthful about visible/log state.** All nine use `readOnlyHint: false` in v0.3.2.
+**ADR-015 — Every tool annotation is truthful about visible/log state.** All nine use `readOnlyHint: false` in v0.3.3.
 
 **ADR-016 — WebMCP outputs are plain JSON-serializable values.** Server-style envelopes and non-JSON graphs are excluded.
 
@@ -1317,6 +1386,7 @@ Architecture requires evidence; it does not assert these items are already compl
 - **Financial or preferential support:** retain an attestation and supporting provenance that the project was not developed or derived using Sponsor or Administrator financial/preferential support—including funding, investment, contract work, or a commercial license—within the official rule's restriction.
 - **Platforms:** testing instructions and recorded calls cover ChatGPT’s in-app browser and Chrome 149+ with WebMCP testing enabled.
 - **Live experience:** accessible HTTPS URL, no account/authentication, free of charge, and unrestricted for judges through judging.
+- **Reproducibility:** clean install/test/build commands, pinned toolchain, emitted server/assets/hosting manifest, response headers, request inventory, and `docs/evidence/demo-runtime.json` all identify the same commit and URL.
 - **Description:** four explicit parts—WebMCP fit, better UX, newly possible human-Agent collaboration, and implementation approach.
 - **Repository:** public source/assets plus functional/testing instructions; root MIT license detectable in the repository About area.
 - **Video:** public YouTube, under three minutes, clear functioning demo with explanatory audio, complete `query → get_route → compare → select → confirm` journey, unit-rendering proof, hotel mapping proof, English narration/captions, and no background music.
@@ -1324,6 +1394,7 @@ Architecture requires evidence; it does not assert these items are already compl
 - **Provenance:** disclose whether any work predates the submission period and distinguish dated prior work from meaningful WebMCP work.
 - **IP/assets:** record source, license, and authorization for every dependency, SDK, API, dataset, image, font, audio, and other asset; exclude third-party trademarks and unauthorized material.
 - **Synthetic assets:** `intercity-car-6.json` and before/after mockups are independently authored and unbranded; documented operational facts may inform them, but no third-party diagram, screenshot, artwork, or proprietary dataset is reproduced.
+- **Social preview:** `site/public/og.png` is an original unbranded Bearing asset; English Open Graph title/description and asset provenance are recorded with the other shipped assets.
 
 ## 27. Final recommended structure and success criteria
 
