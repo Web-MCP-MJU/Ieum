@@ -50,3 +50,14 @@ describe('describeRef', () => {
     );
   });
 });
+
+describe('followUps are questions, not instructions', () => {
+  // Architecture section 5 defines these as "named next questions". A traveler
+  // deciding by ear needs the conversation carried forward; a list of things they
+  // could type is useless to someone who is not reading the screen.
+  it.each(['6-12A', 'restroom'])('puts a question to the traveler for %s', (ref) => {
+    const { followUps } = describeRef(railFixture, ref);
+    expect(followUps.length).toBeGreaterThan(0);
+    expect(followUps.filter((item) => !item.trim().endsWith('?'))).toEqual([]);
+  });
+});
