@@ -7,11 +7,19 @@ import { Check, MapPin, RotateCcw, Route as RouteIcon, Search, Sparkles } from '
 import { createBearingApplication, type BearingApplication, type ConfirmationOutcome } from '@/src/application/use-cases';
 import { railFixture } from '@/src/data/fixture';
 import type { Comparison, Description, RailCandidate } from '@/src/domain/types';
+import { RouteOverlay } from '@/src/ui/RouteOverlay';
 import { registerBearingTools, type DocumentWithModelContext, type WebMCPCapability } from '@/src/webmcp/register';
 
 type PendingConfirmation = { resolve(value: ConfirmationOutcome): void; reject(reason?: unknown): void };
 
 type QuietCarFilter = 'any' | 'quiet' | 'non-quiet';
+
+const routePoints = new Map([
+  ...railFixture.seats.map((item) => [item.ref, item.position_m] as const),
+  ...railFixture.landmarks.map((item) => [item.key, item.position_m] as const),
+  ...railFixture.referencePoints.map((item) => [item.ref, item.position_m] as const),
+  ...railFixture.aisleAnchors.map((item) => [item.ref, item.position_m] as const),
+]);
 
 function positiveNumber(value: string): number | undefined {
   const parsed = Number(value);
@@ -61,6 +69,10 @@ export function BearingApp() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const confirmTriggerRef = useRef<HTMLButtonElement>(null);
+  const carStageRef = useRef<HTMLDivElement>(null);
+  const seatGridRef = useRef<HTMLDivElement>(null);
+  const routeSummaryRef = useRef<HTMLElement>(null);
+  const focusRouteSummaryRef = useRef(false);
   const restoreConfirmationFocusRef = useRef(false);
   const [confirmation] = useState(() => createConfirmationBroker(
     () => setDialogOpen(true),
@@ -164,6 +176,12 @@ export function BearingApp() {
     }
   }, [dialogOpen, state.confirmationStatus]);
 
+  useEffect(() => {
+    if (!state.activeRoute || !focusRouteSummaryRef.current) return;
+    focusRouteSummaryRef.current = false;
+    routeSummaryRef.current?.focus();
+  }, [state.activeRoute]);
+
   const runQuery = () => {
     if (hasInvalidStepDraft) {
       setAnnouncement('Enter a step length greater than 0.');
@@ -225,13 +243,17 @@ export function BearingApp() {
       return;
     }
     try {
+      focusRouteSummaryRef.current = true;
       app.getRoute({
         from: routeFrom,
         to: routeTo,
         ...renderInput,
       });
       setAnnouncement(`Route from ${routeFrom} to ${routeTo} is ready.`);
-    } catch (error) { setAnnouncement(errorMessage(error)); }
+    } catch (error) {
+      focusRouteSummaryRef.current = false;
+      setAnnouncement(errorMessage(error));
+    }
   };
 
   const compareCandidates = () => {
@@ -301,13 +323,6 @@ export function BearingApp() {
     ...contextChoices,
     ...railFixture.seats.map((item) => ({ ref: item.ref, label: `Seat ${item.row}${item.seatLetter}` })),
   ];
-  const point = new Map([
-    ...railFixture.seats.map((item) => [item.ref, item.position_m] as const),
-    ...railFixture.landmarks.map((item) => [item.key, item.position_m] as const),
-    ...railFixture.referencePoints.map((item) => [item.ref, item.position_m] as const),
-    ...railFixture.aisleAnchors.map((item) => [item.ref, item.position_m] as const),
-  ]);
-
   return (
     <main aria-label="Ieum rail workspace" className="app-shell">
       <div inert={dialogOpen ? true : undefined}>
@@ -345,15 +360,15 @@ export function BearingApp() {
 
           <section className="panel layout-panel" aria-labelledby="layout-title">
             <div className="layout-header"><div><p className="eyebrow">02 · Understand</p><h2 id="layout-title">Car 6 · Business Class</h2><p><strong>60 seats</strong> · <span className="available-copy">47 available</span> · Quiet car</p></div><MapPin aria-hidden="true" size={28} /></div>
-            <div className="car-stage">
-              {state.activeRoute && <svg className="route-overlay" viewBox="0 0 310 2640" aria-label={`Route from ${state.activeRoute.from} to ${state.activeRoute.to}`}>
-                {state.activeRoute.segments.map((segment) => {
-                  const from = point.get(segment.from); const to = point.get(segment.to);
-                  return from && to ? <line key={`${segment.from}-${segment.to}`} x1={from.x * 100} y1={from.y * 100} x2={to.x * 100} y2={to.y * 100} /> : null;
-                })}
-              </svg>}
+            <div ref={carStageRef} className="car-stage">
+              {state.activeRoute && <RouteOverlay
+                route={state.activeRoute}
+                points={routePoints}
+                stageRef={carStageRef}
+                gridRef={seatGridRef}
+              />}
               <div className="car-nose">FRONT ENTRANCE</div>
-              <div role="grid" aria-label="Car 6 seat grid" className="seat-grid">
+              <div ref={seatGridRef} role="grid" aria-label="Car 6 seat grid" className="seat-grid">
                 {Array.from({ length: 15 }, (_, rowIndex) => (
                   <div role="row" className="seat-row" key={rowIndex + 7}>
                     <span className="row-number" aria-hidden="true">{rowIndex + 7}</span>
@@ -380,7 +395,7 @@ export function BearingApp() {
               </div>
               <div className="car-nose rear">REAR · CAFÉ · RESTROOM</div>
             </div>
-            {state.activeRoute && <section className="route-summary" aria-label="Active route"><h3><RouteIcon aria-hidden="true" size={18} />Route to {state.activeRoute.requestedTo}</h3><ol>{state.activeRoute.rendered.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className="route-total">{state.activeRoute.rendered.summary}</p></section>}
+            {state.activeRoute && <section ref={routeSummaryRef} className="route-summary" aria-label="Active route" tabIndex={-1}><h3><RouteIcon aria-hidden="true" size={18} />Route to {state.activeRoute.requestedTo}</h3><ol>{state.activeRoute.rendered.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className="route-total">{state.activeRoute.rendered.summary}</p></section>}
           </section>
 
           <aside className="right-column">
