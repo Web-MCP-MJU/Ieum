@@ -22,8 +22,8 @@ const messages: Record<DomainErrorCode, string> = {
 };
 
 export class DomainError extends Error {
-  constructor(public readonly code: DomainErrorCode) {
-    super(messages[code]);
+  constructor(public readonly code: DomainErrorCode, message?: string) {
+    super(message ?? messages[code]);
     this.name = 'DomainError';
   }
 }
