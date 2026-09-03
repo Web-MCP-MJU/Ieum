@@ -40,15 +40,37 @@ WebMCP Adapter (src/webmcp/)
 External Browser Agent (ChatGPT, Claude, etc.)
 ```
 
-Run locally:
+## Two trees, on purpose
+
+This repository holds two implementations of the same contract, and it is worth
+saying which is which before you read either.
+
+| | What it is |
+| --- | --- |
+| **`site/`** | The deployed demo. Next.js UI, its own engine, its own fixture. This is what a judge opens. |
+| **`src/`** (root) | A reference engine used to hold the output contract honest: 94 tests plus a validator that checks every tool result against `docs/contracts/ieum-output.schema.json`. No UI. |
+
+They were written in parallel and both satisfy `docs/Architecture.md`. Their
+fixtures are authored separately, so the numbers differ — `site/` has 47 of 60
+seats available, the root fixture has 45. Neither is wrong; they are two cars.
+
+Run the demo:
 ```bash
-npm install
-npm test          # 91/91 ✔
-npm run typecheck # strict mode ✔
+cd site && npm install
+npm run dev        # the deployed surface
+npm test
 ```
 
-Run `npm run dev` and open `/smoke.html` in Chrome 149+ or the ChatGPT desktop browser.
-It registers the nine real tools and calls them, so it fails if the engine is broken.
+Run the reference engine:
+```bash
+npm install
+npm test           # 94 tests, including schema conformance for all nine tools
+npm run typecheck  # strict mode
+```
+
+`npm run dev` at the root serves `/smoke.html`, which registers the nine real
+tools and calls them, so it fails if the reference engine is broken. The root
+tree has no page of its own and is not deployed.
 
 ## Design Decisions
 
