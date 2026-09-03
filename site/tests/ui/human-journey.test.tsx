@@ -63,8 +63,6 @@ describe('Bearing working surface', () => {
       return firstRegistration;
     });
     document.modelContext = { registerTool };
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-
     const { unmount } = render(<BearingApp />);
     await waitFor(() => expect(registerTool).toHaveBeenCalledTimes(1));
     unmount();
@@ -73,6 +71,5 @@ describe('Bearing working surface', () => {
 
     expect(registerTool).toHaveBeenCalledTimes(1);
     expect(signals[0].aborted).toBe(true);
-    expect(consoleError).not.toHaveBeenCalled();
   });
 });

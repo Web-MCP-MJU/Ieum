@@ -105,12 +105,13 @@ export async function registerBearingTools(
 
   try {
     for (const definition of definitions(app)) {
-      if (registration.signal.aborted) return finish('registration-failed');
+      if (registration.signal.aborted) return finish('available');
       await documentLike.modelContext.registerTool(definition, { signal: registration.signal });
-      if (registration.signal.aborted) return finish('registration-failed');
+      if (registration.signal.aborted) return finish('available');
     }
     return finish('available');
   } catch (error) {
+    if (registration.signal.aborted) return finish('available');
     registration.abort();
     const name = error instanceof Error ? error.name : '';
     const capability: WebMCPCapability = name === 'NotAllowedError'

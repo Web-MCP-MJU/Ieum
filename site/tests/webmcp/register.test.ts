@@ -68,9 +68,10 @@ describe('registerBearingTools', () => {
     const registerTool = vi.fn<() => void>();
     const app = createBearingApplication(railFixture, { open: async () => 'cancelled' });
 
-    await registerBearingTools({ modelContext: { registerTool } }, app, { signal: owner.signal });
+    const registration = await registerBearingTools({ modelContext: { registerTool } }, app, { signal: owner.signal });
 
     expect(registerTool).not.toHaveBeenCalled();
+    expect(registration.capability).toBe('available');
   });
 
   it('stops registration after an owner aborts during the first registration', async () => {
@@ -86,11 +87,12 @@ describe('registerBearingTools', () => {
 
     owner.abort();
     firstRegistration.resolve();
-    await registering;
+    const registration = await registering;
 
     expect(registerTool).toHaveBeenCalledTimes(1);
     expect(signals).toHaveLength(1);
     expect(signals.every((signal) => signal.aborted)).toBe(true);
+    expect(registration.capability).toBe('available');
   });
 
   it('keeps the shared registration signal disposed when an aborted registration rejects late', async () => {
@@ -106,23 +108,27 @@ describe('registerBearingTools', () => {
 
     owner.abort();
     firstRegistration.reject(new Error('late registration failure'));
-    await registering;
+    const registration = await registering;
 
     expect(registerTool).toHaveBeenCalledTimes(1);
     expect(signals).toHaveLength(1);
     expect(signals.every((signal) => signal.aborted)).toBe(true);
+    expect(registration.capability).toBe('available');
   });
 
   it('reports an insecure context before checking model-context availability', async () => {
     const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'isSecureContext');
-    Object.defineProperty(globalThis, 'isSecureContext', { configurable: true, value: false });
-    const app = createBearingApplication(railFixture, { open: async () => 'cancelled' });
+    try {
+      Object.defineProperty(globalThis, 'isSecureContext', { configurable: true, value: false });
+      const app = createBearingApplication(railFixture, { open: async () => 'cancelled' });
 
-    const registration = await registerBearingTools({}, app);
+      const registration = await registerBearingTools({}, app);
 
-    expect(registration.capability).toBe('insecure-context');
-    if (descriptor) Object.defineProperty(globalThis, 'isSecureContext', descriptor);
-    else Reflect.deleteProperty(globalThis, 'isSecureContext');
+      expect(registration.capability).toBe('insecure-context');
+    } finally {
+      if (descriptor) Object.defineProperty(globalThis, 'isSecureContext', descriptor);
+      else Reflect.deleteProperty(globalThis, 'isSecureContext');
+    }
   });
 
   it('reports undo as unavailable while human confirmation is pending', async () => {
