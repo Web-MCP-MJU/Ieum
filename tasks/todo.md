@@ -1,5 +1,23 @@
 # Web MCP 대회 프로젝트 문서 검토
 
+## 배포 401 복구
+
+- [x] 공개 URL의 HTTP 응답을 재현하고 응답 주체를 식별한다.
+- [x] 애플리케이션 인증 코드와 Sites 접근 정책을 분리해 조사한다.
+- [x] 최근 배포 변경과 기존 공개 데모 요구사항을 대조한다.
+- [x] 사용자 승인 후 Sites 접근 모드를 `public`으로 전환한다.
+- [x] 비로그인 HTTP 요청이 200을 반환하고 Bearing HTML을 제공하는지 검증한다.
+- [ ] 별도 후속 작업으로 배포 최상위 응답에서 누락된 필수 보안 헤더를 조사한다.
+
+### 401 조사 Review
+
+- 재현: 배포 URL의 최상위 요청은 Cloudflare 경유 `HTTP/2 401`과 Sites의 `Sign in required` 페이지를 반환한다.
+- 경계 판정: 응답은 Bearing 앱 렌더링 전에 Sites dispatch 계층에서 생성되며, 앱 자체에는 로그인·인증 또는 외부 API 요청이 없다.
+- 원인: Sites 프로젝트 접근 정책이 `custom`이고 소유자 계정 1명만 허용되어 있다. 따라서 비로그인 방문자는 의도대로 차단된다.
+- 수정 설계: 소스나 배포 산출물은 변경하지 않고 접근 정책만 `public`으로 전환한다. 실패 시 추가 코드 변경 없이 정책 상태와 HTTP 응답을 다시 수집한다.
+- 완료 증거: 접근 정책은 revision 2의 `public`이며, 쿠키나 인증 헤더가 없는 공개 URL 요청은 `HTTP/2 200`과 `Bearing — Rail spatial accessibility` 문서를 반환한다.
+- 후속 관찰: 같은 최상위 응답에서 기존 계약의 `Permissions-Policy`, `Origin-Agent-Cluster`, CSP, `X-Content-Type-Options` 헤더가 관찰되지 않았다. 이는 401과 별개로 조사한다.
+
 ## Bearing 실제 동작 데모 웹사이트
 
 - [x] 저장소, PRD, Architecture, 최근 커밋을 확인한다.
