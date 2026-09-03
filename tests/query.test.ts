@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { car6 } from "../src/domain/car-6.ts";
 import { query, MAX_RESULTS, type QueryOutcome } from "../src/domain/query-engine.ts";
 import { compare } from "../src/domain/compare-engine.ts";
-import type { Comparison, DomainError } from "../src/domain/types.ts";
+import type { Comparison, DomainError, RenderOptions } from "../src/domain/types.ts";
+import { STEPS_NOTE } from "../src/domain/render.ts";
 
 const ok = (...args: Parameters<typeof query>): QueryOutcome => {
   const r = query(...args);
@@ -177,8 +178,8 @@ test("unitsNote appears only for step-rendered results", () => {
 
 // ------------------------------------------------------------------ compare
 
-const cmp = (refs: string[]): Comparison => {
-  const r = compare(car6, refs);
+const cmp = (refs: string[], opts: RenderOptions = {}): Comparison => {
+  const r = compare(car6, refs, opts);
   assert.ok(!("code" in r), `expected a comparison, got ${JSON.stringify(r)}`);
   return r as Comparison;
 };
@@ -226,4 +227,11 @@ test("an unavailable ref can be compared and its availability shows", () => {
   const c = cmp([unavailableRef, availableRef]);
   const row = c.rows.find((r) => r.ref === unavailableRef)!;
   assert.equal(row.values["available"], false);
+});
+
+test("the step caveat rides on the result that renders steps", () => {
+  const stepped = cmp(["6-12A", "6-14D"], { units: "steps" });
+  assert.equal(stepped.unitsNote, STEPS_NOTE,
+    "the distance axes render steps, so the approximation must be stated");
+  assert.equal(cmp(["6-12A", "6-14D"], { units: "feet" }).unitsNote, undefined);
 });

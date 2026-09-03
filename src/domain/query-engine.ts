@@ -196,7 +196,7 @@ export function query(
   const appliedCriteria: AppliedCriteria = { ...criteria, availableOnly };
   const near = criteria.near;
   const nearLabel = near
-    ? layout.landmarks.find((l) => l.key === near)?.label.replace(/\s*\(.*\)$/, "").toLowerCase() ?? near
+    ? layout.landmarks.find((l) => l.key === near)?.label.toLowerCase() ?? near
     : null;
 
   let scored = layout.seats

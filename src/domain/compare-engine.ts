@@ -2,7 +2,7 @@ import type {
   Comparison, DomainError, Layout, RenderOptions, Seat, SpatialRef,
 } from "./types.ts";
 import { routeLength } from "./route-engine.ts";
-import { DEFAULTS, formatDistance } from "./render.ts";
+import { DEFAULTS, STEPS_NOTE, formatDistance } from "./render.ts";
 
 /**
  * Compare engine.
@@ -77,11 +77,16 @@ export function compare(
     .filter((a) => new Set(seats.map((s) => a.value(s))).size > 1);
   const kept = [...axes.filter((a) => a.core), ...discriminating];
 
+  // Architecture 6: the step caveat rides on the result that contains a
+  // step-rendered string. Here that is the distance axes, and only if they survived.
+  const rendersSteps = units === "steps" && kept.some((a) => a.key.startsWith("distance_"));
+
   return {
     axes: kept.map((a) => ({ key: a.key, label: a.label })),
     rows: seats.map((s) => ({
       ref: s.ref,
       values: Object.fromEntries(kept.map((a) => [a.key, a.value(s)])),
     })),
+    ...(rendersSteps ? { unitsNote: STEPS_NOTE } : {}),
   };
 }
