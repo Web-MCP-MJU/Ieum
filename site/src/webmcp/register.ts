@@ -33,7 +33,7 @@ function selectionState(app: BearingApplication) {
     selected: [...state.selection],
     selectedCount: state.selection.length,
     priceTotal_usd: state.priceTotal_usd,
-    undoable: state.history.length > 0,
+    undoable: state.confirmationStatus === 'draft' && state.history.length > 0,
     status: state.confirmationStatus,
   };
 }

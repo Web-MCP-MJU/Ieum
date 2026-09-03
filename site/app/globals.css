@@ -159,6 +159,51 @@ select {
   font-weight: 700;
 }
 
+.needs-fieldset,
+.preference-controls,
+.route-controls {
+  margin-top: 16px;
+}
+
+.needs-fieldset {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.needs-fieldset legend,
+.preference-controls summary {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.needs-fieldset label {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.needs-fieldset input {
+  width: 20px;
+  min-height: 20px;
+}
+
+.preference-controls summary {
+  cursor: pointer;
+}
+
+.route-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.route-controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
 input,
 select {
   width: 100%;

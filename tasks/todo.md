@@ -28,10 +28,10 @@
 - [x] Task 2: canonical rail fixture와 교차 필드 validator를 구현한다.
 - [x] Task 3: query/describe/compare/render 순수 도메인을 구현한다.
 - [x] Task 4: route/continuation 엔진을 구현한다.
-- [ ] Task 5: Application state, undo, confirmation lifecycle을 구현한다.
-- [ ] Task 6: atomic WebMCP 9-tool adapter를 구현한다.
-- [ ] Task 7: 전체 접근 가능 working surface를 구현한다.
-- [ ] Task 8: E2E, 자산, 빌드, runtime/deployment evidence를 완성한다.
+- [x] Task 5: Application state, undo, confirmation lifecycle을 구현한다.
+- [x] Task 6: atomic WebMCP 9-tool adapter를 구현한다.
+- [x] Task 7: 전체 접근 가능 working surface를 구현한다.
+- [x] Task 8: E2E, 자산, 빌드, runtime/deployment evidence를 완성한다.
 
 ### 구현 Review
 
@@ -42,6 +42,9 @@
 - 작동형 수직 흐름: query/describe/route/compare/select/selection/undo/confirm과 WebMCP 9개를 동일 Application state에 연결하고, 60석 키보드 그리드·경로 SVG·확인 dialog·활동 로그를 실제 화면에 투영했다.
 - 현재 검증: 전체 71개 테스트, lint, typecheck, production build, DESIGN.md errors 0/warnings 0, 로컬 HTTP 200 및 필수 `dist` 산출물을 확인했다.
 - Sites 배포: owner-only production 배포가 성공했으며 `https://bearing-rail-access.wlvlxlrkt.chatgpt.site`에서 실행된다.
+- PR 전 교정: 중복/재확인 실패가 확정 상태를 해제하지 않도록 막고, 호출별 abort와 120초 timeout이 원래 draft snapshot을 복구하도록 수정했다.
+- PR 전 교정: native modal의 Escape 취소·포커스 복귀, 전체 query/route/render 사람용 controls, pending 상태의 `undoable: false`, WebMCP/격리 보안 헤더를 구현하고 회귀 테스트로 고정했다.
+- PR 최종 검증: nonce 기반 CSP에서 `unsafe-inline`/`unsafe-eval`을 제거하고, shared preferences와 step length를 Application state에 연결했다. Production E2E 3개가 9개 WebMCP 등록·Agent confirm/abort·실제 헤더·axe·키보드 흐름을 통과했으며, 전체 79개 Vitest와 build/lint/typecheck/DESIGN 검증도 통과했다.
 
 ### 설계 교정 Review
 

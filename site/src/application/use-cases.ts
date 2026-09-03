@@ -6,9 +6,9 @@ import { querySeats } from '@/src/domain/query';
 import { getRoute } from '@/src/domain/route';
 import type { LoadedRailFixture, QueryInput, RenderInput } from '@/src/domain/types';
 
-export type ConfirmationOutcome = 'confirmed' | 'cancelled';
+export type ConfirmationOutcome = 'confirmed' | 'cancelled' | 'timeout';
 export type ConfirmationPort = { open(signal: AbortSignal): Promise<ConfirmationOutcome> };
-export type CallOptions = { origin?: 'agent' | 'human'; signal?: AbortSignal };
+export type CallOptions = { origin?: 'agent' | 'human'; signal?: AbortSignal; timeoutMs?: number };
 
 let callSequence = 0;
 
@@ -183,30 +183,42 @@ export function createBearingApplication(fixture: LoadedRailFixture, port: Confi
     async confirm(_input: Record<string, never> = {}, options?: CallOptions) {
       const callId = begin('a11y.confirm', {}, options);
       const state = store.getState();
+      if (state.confirmationStatus !== 'draft' || state.selection.length === 0) {
+        return fail(callId, new DomainError('CONFIRMATION_REQUIRED'));
+      }
+
+      const before = snapshot(state);
+      const controller = new AbortController();
+      let timedOut = false;
+      const abortFromCaller = () => controller.abort(options?.signal?.reason);
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        controller.abort(new DOMException('Confirmation timed out.', 'TimeoutError'));
+      }, options?.timeoutMs ?? 120_000);
+      if (options?.signal?.aborted) controller.abort(options.signal.reason);
+      else options?.signal?.addEventListener('abort', abortFromCaller, { once: true });
+      store.update((current) => ({ ...current, confirmationStatus: 'confirmation_pending' }));
+
       try {
-        if (state.confirmationStatus !== 'draft' || state.selection.length === 0) {
-          throw new DomainError('CONFIRMATION_REQUIRED');
+        if (controller.signal.aborted) throw controller.signal.reason;
+        const outcome = await port.open(controller.signal);
+        if (controller.signal.aborted) throw controller.signal.reason;
+        if (outcome === 'confirmed') {
+          finish(callId, { outcome }, { confirmationStatus: 'confirmed', history: [] });
+        } else {
+          finish(callId, { outcome }, { ...before });
         }
-        const before = snapshot(state);
-        store.update((current) => ({ ...current, confirmationStatus: 'confirmation_pending' }));
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort('timeout'), 120_000);
-        options?.signal?.addEventListener('abort', () => controller.abort(options.signal?.reason), { once: true });
-        try {
-          const outcome = await port.open(controller.signal);
-          if (controller.signal.aborted) throw controller.signal.reason;
-          if (outcome === 'confirmed') {
-            finish(callId, { outcome }, { confirmationStatus: 'confirmed', history: [] });
-          } else {
-            finish(callId, { outcome }, { ...before });
-          }
-          return { outcome };
-        } finally {
-          clearTimeout(timeout);
-        }
+        return { outcome };
       } catch (error) {
-        store.update((current) => ({ ...current, confirmationStatus: 'draft' }));
+        if (timedOut) {
+          finish(callId, { outcome: 'timeout' }, { ...before });
+          return { outcome: 'timeout' as const };
+        }
+        store.update((current) => ({ ...current, ...before }));
         return fail(callId, error);
+      } finally {
+        clearTimeout(timeout);
+        options?.signal?.removeEventListener('abort', abortFromCaller);
       }
     },
   };

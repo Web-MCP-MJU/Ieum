@@ -10,7 +10,7 @@
     "build": "vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "design:lint": "npx --yes @google/design.md@0.2.0 lint ../DESIGN.md",
-    "lint": "oxlint app src tests --no-error-on-unmatched-pattern --deny-warnings --react-plugin --jsx-a11y-plugin --vitest-plugin",
+    "lint": "oxlint app src tests e2e next.config.ts playwright.config.ts --no-error-on-unmatched-pattern --deny-warnings --react-plugin --jsx-a11y-plugin --vitest-plugin",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",

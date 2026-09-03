@@ -25,6 +25,9 @@ dist/
 build/
 out/
 coverage/
+playwright-report/
+test-results/
+blob-report/
 .cache/
 .vite/
 .next/

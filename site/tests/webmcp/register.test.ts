@@ -28,6 +28,8 @@ describe('registerBearingTools', () => {
       (definition.annotations as { readOnlyHint: boolean }).readOnlyHint === false,
     )).toBe(true);
     expect(new Set(signals).size).toBe(1);
+    const undo = definitions.find((definition) => definition.name === 'a11y.undo')!;
+    expect(typeof undo.execute).toBe('function');
     registration.dispose();
     expect(signals[0].aborted).toBe(true);
   });
@@ -48,5 +50,28 @@ describe('registerBearingTools', () => {
     const registration = await registerBearingTools(documentLike, app);
     expect(registration.capability).toBe('registration-failed');
     expect(signals.every((signal) => signal.aborted)).toBe(true);
+  });
+
+  it('reports undo as unavailable while human confirmation is pending', async () => {
+    const definitions: Array<Record<string, unknown>> = [];
+    let settle!: (value: 'cancelled') => void;
+    const app = createBearingApplication(railFixture, {
+      open: () => new Promise((resolve) => { settle = resolve; }),
+    });
+    await registerBearingTools({
+      modelContext: {
+        registerTool(definition: Record<string, unknown>) { definitions.push(definition); },
+      },
+    }, app);
+    const execute = (name: string) => definitions.find((definition) => definition.name === name)!
+      .execute as (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+
+    await execute('a11y.select')({ ref: '6-12A' });
+    const pending = execute('a11y.confirm')({});
+    const undo = await execute('a11y.undo')({});
+
+    expect(undo).toMatchObject({ ok: false, state: { undoable: false, status: 'confirmation_pending' } });
+    settle('cancelled');
+    await pending;
   });
 });
