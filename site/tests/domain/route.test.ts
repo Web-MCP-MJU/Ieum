@@ -106,3 +106,54 @@ describe('getRoute', () => {
     }
   });
 });
+
+describe('rendered guidance', () => {
+  const spokenNumbers = (text: string): number[] =>
+    [...text.matchAll(/([\d.]+) (?:feet|meters|steps?)\b/g)].map((match) => Number(match[1]));
+
+  it.each(['feet', 'meters', 'steps'] as const)(
+    'states a total that equals the sum of the spoken segments in %s',
+    (units) => {
+      // A listener who counts along must not be contradicted by the last sentence:
+      // sum(round(x)) and round(sum(x)) differ, so the total is summed over what
+      // was actually said.
+      for (const [from, to] of [
+        ['entrance_front', '6-12A'],
+        ['6-12A', 'restroom'],
+        ['6-12A', '6-14D'],
+      ] as const) {
+        const route = getRoute(railFixture, from, to, { units });
+        const parts = route.rendered.instructions.flatMap(spokenNumbers);
+        const total = spokenNumbers(route.rendered.summary).at(-1);
+        expect(total).toBeCloseTo(parts.reduce((sum, part) => sum + part, 0), 1);
+      }
+    },
+  );
+
+  it('tells the traveler to turn when the heading changes, and not when it does not', () => {
+    const turning = getRoute(railFixture, '6-12A', 'restroom');
+    const headings = turning.segments.map((segment) => segment.bearing.degrees);
+    expect(new Set(headings).size).toBeGreaterThan(1);
+    expect(turning.rendered.instructions.join(' ')).toMatch(/Turn (left|right|around)/);
+
+    // Consecutive segments on the same heading need no rotation, and saying one
+    // would contradict the walk that follows it.
+    const straight = getRoute(railFixture, '6-12A', '6-12D');
+    expect(new Set(straight.segments.map((segment) => segment.bearing.degrees)).size).toBe(1);
+    expect(straight.rendered.instructions.join(' ')).not.toMatch(/Turn /);
+  });
+
+  it('names the landmarks a segment passes instead of only collecting them', () => {
+    const route = getRoute(railFixture, '6-12A', 'restroom');
+    const passed = route.segments.flatMap((segment) => segment.landmarksPassed);
+    expect(passed.length).toBeGreaterThan(0);
+
+    const labels = passed
+      .map((key) => railFixture.landmarks.find((item) => item.key === key)?.label)
+      .filter((label): label is string => label !== undefined);
+
+    const spoken = route.rendered.instructions.join(' ');
+    expect(labels.length).toBeGreaterThan(0);
+    expect(labels.filter((label) => !spoken.includes(label))).toEqual([]);
+  });
+});

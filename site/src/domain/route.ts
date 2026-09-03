@@ -1,7 +1,14 @@
 import { DomainError } from './errors';
 import { shortestPathEdges } from './graph';
-import { normalizeRenderOptions, renderDirection, renderDistance, walkingTimeSeconds } from './render';
-import type { LoadedRailFixture, RenderInput, Route, RouteSegment } from './types';
+import {
+  distanceValue,
+  formatDistanceValue,
+  normalizeRenderOptions,
+  stepUnitsNote,
+  renderDirection,
+  walkingTimeSeconds,
+} from './render';
+import type { Landmark, LoadedRailFixture, RenderInput, Route, RouteSegment } from './types';
 
 function rowEndpoint(ref: string): boolean {
   return /^row_\d+_aisle$/.test(ref);
@@ -55,6 +62,32 @@ function checkpointLabel(fixture: LoadedRailFixture, ref: string): string {
     fixture.aisleAnchors.find((item) => item.ref === ref)?.label ?? ref;
 }
 
+/** The rotation between two car-axis headings, or undefined when there is none. */
+function turnPhrase(previousDegrees: number, degrees: number): string | undefined {
+  const turn = ((degrees - previousDegrees) % 360 + 360) % 360;
+  if (turn === 0) return undefined;
+  if (turn === 180) return 'Turn around';
+  return turn < 180 ? 'Turn right' : 'Turn left';
+}
+
+/**
+ * Landmarks on the way, named. The fixture authors sign text and detectability
+ * for exactly this, and without it a route is only distances and headings —
+ * the shape O&M literature calls insufficient.
+ */
+function passedPhrase(
+  landmarksPassed: readonly string[],
+  byKey: ReadonlyMap<string, Landmark>,
+): string {
+  const names = landmarksPassed
+    .map((key) => byKey.get(key))
+    .filter((landmark): landmark is Landmark => landmark !== undefined)
+    .map((landmark) => landmark.signpostedAs
+      ? `${landmark.label} (signed ${landmark.signpostedAs})`
+      : landmark.label);
+  return names.length === 0 ? '' : ` You pass ${names.join(', then ')}.`;
+}
+
 export function getRoute(
   fixture: LoadedRailFixture,
   from: string,
@@ -101,18 +134,43 @@ export function getRoute(
     (sum, segment) => sum + segment.traversal_time_s,
     0,
   );
-  const instructions = returned.map((segment) => {
-    const distance = renderDistance(segment.length_m, options).rendered;
-    const direction = renderDirection(
-      segment.bearing.degrees,
-      segment.bearing.frame,
-      options.directionStyle,
-    );
+  const landmarkByKey = new Map(fixture.landmarks.map((landmark) => [landmark.key, landmark]));
+  const instructions = returned.map((segment, index) => {
+    const value = distanceValue(segment.length_m, options);
+    const distance = formatDistanceValue(value, options.units);
     const rows = segment.countedFeatures
       ? `, passing ${segment.countedFeatures.count} ${segment.countedFeatures.count === 1 ? 'row' : 'rows'}`
       : '';
-    return `Move ${direction} for ${distance}${rows}.`;
+
+    // Every segment this engine emits is car_axis, so the change in heading
+    // between two of them is the rotation the traveler has to make. Without it
+    // the instructions jump from one facing to another and never say to turn.
+    const previous = returned[index - 1];
+    const turn = previous === undefined
+      ? undefined
+      : turnPhrase(previous.bearing.degrees, segment.bearing.degrees);
+
+    // Naming the direction again after a turn either repeats it or, worse,
+    // describes the walk from the heading the traveler has just left.
+    const lead = turn
+      ? `${turn}, then continue for ${distance}`
+      : `${index === 0 ? 'Move' : 'Continue'} ${renderDirection(
+          segment.bearing.degrees,
+          segment.bearing.frame,
+          options.directionStyle,
+        )} for ${distance}`;
+
+    return `${lead}${rows}.${passedPhrase(segment.landmarksPassed, landmarkByKey)}`;
   });
+  // Section 7-7: the total a listener reaches by adding up what they were told
+  // must be the total they are told, so it is summed over displayed values.
+  const spokenTotal = formatDistanceValue(
+    Number(returned
+      .reduce((sum, segment) => sum + distanceValue(segment.length_m, options), 0)
+      .toFixed(1)),
+    options.units,
+  );
+
   return {
     from,
     requestedTo,
@@ -130,9 +188,9 @@ export function getRoute(
       directionStyle: options.directionStyle,
       instructions,
       summary: checkpointSegment
-        ? `Continue to ${checkpointLabel(fixture, checkpointSegment.to)}, then request the remaining route.`
-        : `Follow ${returned.length} route ${returned.length === 1 ? 'segment' : 'segments'} to ${requestedTo}.`,
-      ...(options.units === 'steps' ? { unitsNote: renderDistance(0, options).unitsNote } : {}),
+        ? `Continue to ${checkpointLabel(fixture, checkpointSegment.to)}, then request the remaining route. Total ${spokenTotal} so far.`
+        : `Follow ${returned.length} route ${returned.length === 1 ? 'segment' : 'segments'} to ${requestedTo}. Total ${spokenTotal}.`,
+      ...(options.units === 'steps' ? { unitsNote: stepUnitsNote(options.stepLength_m) } : {}),
     },
   };
 }
