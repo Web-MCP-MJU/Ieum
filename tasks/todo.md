@@ -41,6 +41,7 @@
 - 현재 검증: unit/integration 13개, typecheck, lint가 모두 통과한다.
 - 작동형 수직 흐름: query/describe/route/compare/select/selection/undo/confirm과 WebMCP 9개를 동일 Application state에 연결하고, 60석 키보드 그리드·경로 SVG·확인 dialog·활동 로그를 실제 화면에 투영했다.
 - 현재 검증: 전체 71개 테스트, lint, typecheck, production build, DESIGN.md errors 0/warnings 0, 로컬 HTTP 200 및 필수 `dist` 산출물을 확인했다.
+- Sites 배포: owner-only production 배포가 성공했으며 `https://bearing-rail-access.wlvlxlrkt.chatgpt.site`에서 실행된다.
 
 ### 설계 교정 Review
 
