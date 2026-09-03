@@ -162,6 +162,7 @@ select {
 .filter-panel label.availability-filter,
 .candidate-list .comparison-toggle {
   display: flex;
+  min-height: 44px;
   align-items: center;
   gap: 8px;
   font-size: 0.875rem;
