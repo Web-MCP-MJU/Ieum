@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://bearing.example/schemas/tool-outputs-v0.3.3.json",
-  "title": "Bearing v0.3.3 WebMCP tool output contracts",
+  "$id": "https://ieum.example/schemas/tool-outputs-v0.3.3.json",
+  "title": "Ieum v0.3.3 WebMCP tool output contracts",
   "type": "object",
   "additionalProperties": false,
   "properties": {

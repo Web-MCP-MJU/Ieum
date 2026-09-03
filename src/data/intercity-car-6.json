@@ -1,0 +1,1573 @@
+{
+  "domain": "rail",
+  "layoutId": "Car 6, Business Class",
+  "bounds_m": {
+    "length": 22,
+    "width": 3
+  },
+  "aisleY_m": 1.5,
+  "aisleWidth_m": 0.86,
+  "rowPitch_m": 1.1,
+  "axisLabels": {
+    "front": "the front of the car",
+    "rear": "the rear of the car",
+    "negY": "the A and B side",
+    "posY": "the C and D side"
+  },
+  "directPathLetters": [
+    [
+      "A",
+      "B"
+    ],
+    [
+      "C",
+      "D"
+    ]
+  ],
+  "landmarks": [
+    {
+      "key": "entrance_front",
+      "label": "Front door",
+      "position_m": {
+        "x": 0.8,
+        "y": 1.5
+      },
+      "landmarkType": "primary",
+      "sensoryChannels": [
+        "tactile",
+        "auditory",
+        "airflow"
+      ],
+      "detectability": {
+        "caneUser": "high",
+        "dogGuide": "high"
+      },
+      "signpostedAs": "CAR 6"
+    },
+    {
+      "key": "luggage_rack",
+      "label": "Luggage rack",
+      "position_m": {
+        "x": 1.6,
+        "y": 2.65
+      },
+      "landmarkType": "secondary",
+      "sensoryChannels": [
+        "tactile"
+      ],
+      "detectability": {
+        "caneUser": "medium",
+        "dogGuide": "low"
+      }
+    },
+    {
+      "key": "entrance_rear",
+      "label": "Rear door",
+      "position_m": {
+        "x": 19.8,
+        "y": 1.5
+      },
+      "landmarkType": "primary",
+      "sensoryChannels": [
+        "tactile",
+        "auditory",
+        "airflow"
+      ],
+      "detectability": {
+        "caneUser": "high",
+        "dogGuide": "high"
+      },
+      "signpostedAs": "CAR 6"
+    },
+    {
+      "key": "restroom",
+      "label": "Accessible restroom",
+      "position_m": {
+        "x": 20.6,
+        "y": 0.7
+      },
+      "landmarkType": "secondary",
+      "sensoryChannels": [
+        "tactile",
+        "olfactory",
+        "auditory"
+      ],
+      "detectability": {
+        "caneUser": "high",
+        "dogGuide": "medium"
+      },
+      "signpostedAs": "RESTROOM"
+    },
+    {
+      "key": "cafe_car",
+      "label": "Cafe car",
+      "position_m": {
+        "x": 22.8,
+        "y": 1.5
+      },
+      "landmarkType": "primary",
+      "sensoryChannels": [
+        "auditory",
+        "olfactory"
+      ],
+      "detectability": {
+        "caneUser": "high",
+        "dogGuide": "high"
+      },
+      "signpostedAs": "CAFE"
+    }
+  ],
+  "portals": [
+    {
+      "ref": "rear_door",
+      "mode": "door",
+      "label": "Rear door of Car 6",
+      "position_m": {
+        "x": 21,
+        "y": 1.5
+      },
+      "signpostedAs": "CAR 6"
+    },
+    {
+      "ref": "rear_vestibule",
+      "mode": "vestibule",
+      "label": "Vestibule between the cars",
+      "position_m": {
+        "x": 21.3,
+        "y": 1.5
+      }
+    }
+  ],
+  "reachedThrough": {
+    "cafe_car": [
+      "rear_door",
+      "rear_vestibule"
+    ]
+  },
+  "seats": [
+    {
+      "ref": "6-1A",
+      "row": 1,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 3,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 109,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 1180,
+      "bulkhead": true,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "extra_legroom"
+      ]
+    },
+    {
+      "ref": "6-1B",
+      "row": 1,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 3,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 109,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": true,
+      "movableArmrest": true,
+      "footSpace_in2": 1180,
+      "bulkhead": true,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "extra_legroom"
+      ]
+    },
+    {
+      "ref": "6-1C",
+      "row": 1,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 3,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 109,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": true,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 1180,
+      "bulkhead": true,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "extra_legroom"
+      ]
+    },
+    {
+      "ref": "6-1D",
+      "row": 1,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 3,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 109,
+      "available": true,
+      "wheelchairSpace": true,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 1180,
+      "bulkhead": true,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "extra_legroom"
+      ]
+    },
+    {
+      "ref": "6-2A",
+      "row": 2,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 4.1,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-2B",
+      "row": 2,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 4.1,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-2C",
+      "row": 2,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 4.1,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-2D",
+      "row": 2,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 4.1,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-3A",
+      "row": 3,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 5.2,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-3B",
+      "row": 3,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 5.2,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-3C",
+      "row": 3,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 5.2,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-3D",
+      "row": 3,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 5.2,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-4A",
+      "row": 4,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 6.3,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-4B",
+      "row": 4,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 6.3,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-4C",
+      "row": 4,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 6.3,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-4D",
+      "row": 4,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 6.3,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-5A",
+      "row": 5,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 7.4,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-5B",
+      "row": 5,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 7.4,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-5C",
+      "row": 5,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 7.4,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-5D",
+      "row": 5,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 7.4,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-6A",
+      "row": 6,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 8.5,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-6B",
+      "row": 6,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 8.5,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-6C",
+      "row": 6,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 8.5,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-6D",
+      "row": 6,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 8.5,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-7A",
+      "row": 7,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 9.6,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-7B",
+      "row": 7,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 9.6,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-7C",
+      "row": 7,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 9.6,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-7D",
+      "row": 7,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 9.6,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-8A",
+      "row": 8,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 10.7,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-8B",
+      "row": 8,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 10.7,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-8C",
+      "row": 8,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 10.7,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-8D",
+      "row": 8,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 10.7,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-9A",
+      "row": 9,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 11.8,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-9B",
+      "row": 9,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 11.8,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-9C",
+      "row": 9,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 11.8,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-9D",
+      "row": 9,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 11.8,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet"
+      ]
+    },
+    {
+      "ref": "6-10A",
+      "row": 10,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 12.9,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table"
+      ]
+    },
+    {
+      "ref": "6-10B",
+      "row": 10,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 12.9,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table"
+      ]
+    },
+    {
+      "ref": "6-10C",
+      "row": 10,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 12.9,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table"
+      ]
+    },
+    {
+      "ref": "6-10D",
+      "row": 10,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 12.9,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table"
+      ]
+    },
+    {
+      "ref": "6-11A",
+      "row": 11,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 14,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table"
+      ]
+    },
+    {
+      "ref": "6-11B",
+      "row": 11,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 14,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table"
+      ]
+    },
+    {
+      "ref": "6-11C",
+      "row": 11,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 14,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 89,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table"
+      ]
+    },
+    {
+      "ref": "6-11D",
+      "row": 11,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 14,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 89,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table"
+      ]
+    },
+    {
+      "ref": "6-12A",
+      "row": 12,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 15.1,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-12B",
+      "row": 12,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 15.1,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-12C",
+      "row": 12,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 15.1,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-12D",
+      "row": 12,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 15.1,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-13A",
+      "row": 13,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 16.2,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-13B",
+      "row": 13,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 16.2,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-13C",
+      "row": 13,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 16.2,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-13D",
+      "row": 13,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 16.2,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-14A",
+      "row": 14,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 17.3,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-14B",
+      "row": 14,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 17.3,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-14C",
+      "row": 14,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 17.3,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-14D",
+      "row": 14,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 17.3,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-15A",
+      "row": 15,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 18.4,
+        "y": 0.35
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-15B",
+      "row": 15,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 18.4,
+        "y": 0.95
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-15C",
+      "row": 15,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 18.4,
+        "y": 2.05
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 640,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    },
+    {
+      "ref": "6-15D",
+      "row": 15,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 18.4,
+        "y": 2.65
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 79,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 560,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "table",
+        "quiet_zone"
+      ]
+    }
+  ]
+}
