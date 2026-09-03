@@ -1,8 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createBearingApplication } from '@/src/application/use-cases';
 import { railFixture } from '@/src/data/fixture';
 import { registerBearingTools } from '@/src/webmcp/register';
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
 
 describe('registerBearingTools', () => {
   it('registers exactly nine canonical tools and disposes them together', async () => {
@@ -50,6 +60,75 @@ describe('registerBearingTools', () => {
     const registration = await registerBearingTools(documentLike, app);
     expect(registration.capability).toBe('registration-failed');
     expect(signals.every((signal) => signal.aborted)).toBe(true);
+  });
+
+  it('does not register tools when its owner signal is already aborted', async () => {
+    const owner = new AbortController();
+    owner.abort();
+    const registerTool = vi.fn<() => void>();
+    const app = createBearingApplication(railFixture, { open: async () => 'cancelled' });
+
+    const registration = await registerBearingTools({ modelContext: { registerTool } }, app, { signal: owner.signal });
+
+    expect(registerTool).not.toHaveBeenCalled();
+    expect(registration.capability).toBe('available');
+  });
+
+  it('stops registration after an owner aborts during the first registration', async () => {
+    const owner = new AbortController();
+    const firstRegistration = deferred<void>();
+    const signals: AbortSignal[] = [];
+    const registerTool = vi.fn<(definition: Record<string, unknown>, options: { signal: AbortSignal }) => Promise<void>>((_definition, options) => {
+      signals.push(options.signal);
+      return firstRegistration.promise;
+    });
+    const app = createBearingApplication(railFixture, { open: async () => 'cancelled' });
+    const registering = registerBearingTools({ modelContext: { registerTool } }, app, { signal: owner.signal });
+
+    owner.abort();
+    firstRegistration.resolve();
+    const registration = await registering;
+
+    expect(registerTool).toHaveBeenCalledTimes(1);
+    expect(signals).toHaveLength(1);
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    expect(registration.capability).toBe('available');
+  });
+
+  it('keeps the shared registration signal disposed when an aborted registration rejects late', async () => {
+    const owner = new AbortController();
+    const firstRegistration = deferred<void>();
+    const signals: AbortSignal[] = [];
+    const registerTool = vi.fn<(definition: Record<string, unknown>, options: { signal: AbortSignal }) => Promise<void>>((_definition, options) => {
+      signals.push(options.signal);
+      return firstRegistration.promise;
+    });
+    const app = createBearingApplication(railFixture, { open: async () => 'cancelled' });
+    const registering = registerBearingTools({ modelContext: { registerTool } }, app, { signal: owner.signal });
+
+    owner.abort();
+    firstRegistration.reject(new Error('late registration failure'));
+    const registration = await registering;
+
+    expect(registerTool).toHaveBeenCalledTimes(1);
+    expect(signals).toHaveLength(1);
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    expect(registration.capability).toBe('available');
+  });
+
+  it('reports an insecure context before checking model-context availability', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'isSecureContext');
+    try {
+      Object.defineProperty(globalThis, 'isSecureContext', { configurable: true, value: false });
+      const app = createBearingApplication(railFixture, { open: async () => 'cancelled' });
+
+      const registration = await registerBearingTools({}, app);
+
+      expect(registration.capability).toBe('insecure-context');
+    } finally {
+      if (descriptor) Object.defineProperty(globalThis, 'isSecureContext', descriptor);
+      else Reflect.deleteProperty(globalThis, 'isSecureContext');
+    }
   });
 
   it('reports undo as unavailable while human confirmation is pending', async () => {

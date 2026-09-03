@@ -1,9 +1,18 @@
+import { StrictMode } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { BearingApp } from '@/src/ui/BearingApp';
+import { BearingApp, capabilityMessage } from '@/src/ui/BearingApp';
 
-describe('Bearing working surface', () => {
+const originalModelContext = document.modelContext;
+
+afterEach(() => {
+  document.modelContext = originalModelContext;
+  vi.restoreAllMocks();
+});
+
+describe('Ieum working surface', () => {
   it('renders the 60-seat grid and completes a human select and undo flow', async () => {
     render(<BearingApp />);
     expect(screen.getAllByRole('gridcell')).toHaveLength(60);
@@ -45,5 +54,185 @@ describe('Bearing working surface', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it('does not update WebMCP capability after unmounting during registration', async () => {
+    let resolveRegistration!: () => void;
+    const firstRegistration = new Promise<void>((resolve) => { resolveRegistration = resolve; });
+    const signals: AbortSignal[] = [];
+    const registerTool = vi.fn<(definition: Record<string, unknown>, options: { signal: AbortSignal }) => Promise<void>>((_definition, options) => {
+      signals.push(options.signal);
+      return firstRegistration;
+    });
+    document.modelContext = { registerTool };
+    const { unmount } = render(<BearingApp />);
+    await waitFor(() => expect(registerTool).toHaveBeenCalledTimes(1));
+    unmount();
+    resolveRegistration();
+    await Promise.resolve();
+
+    expect(registerTool).toHaveBeenCalledTimes(1);
+    expect(signals[0].aborted).toBe(true);
+  });
+
+  it('retries WebMCP registration cleanly after StrictMode cleans up an in-flight owner', async () => {
+    let resolveFirstRegistration!: () => void;
+    const firstRegistration = new Promise<void>((resolve) => { resolveFirstRegistration = resolve; });
+    const registrations: Array<{ name: string; signal: AbortSignal }> = [];
+    document.modelContext = {
+      registerTool(definition, options) {
+        registrations.push({ name: String(definition.name), signal: options.signal });
+        return registrations.length === 1 ? firstRegistration : undefined;
+      },
+    };
+
+    render(<StrictMode><BearingApp /></StrictMode>);
+    await waitFor(() => expect(registrations.length).toBe(10));
+
+    const firstSignal = registrations[0]!.signal;
+    const currentRegistrations = registrations.filter(({ signal }) => signal !== firstSignal);
+    expect(firstSignal.aborted).toBe(true);
+    expect(currentRegistrations).toHaveLength(9);
+    expect(currentRegistrations.map(({ name }) => name)).toEqual([
+      'a11y.get_layout', 'a11y.query', 'a11y.describe', 'a11y.get_route', 'a11y.compare',
+      'a11y.select', 'a11y.get_selection', 'a11y.undo', 'a11y.confirm',
+    ]);
+
+    resolveFirstRegistration();
+    await Promise.resolve();
+    expect(registrations).toHaveLength(10);
+    expect(screen.getByText('WebMCP connected. Agent tools are available.')).toBeInTheDocument();
+  });
+
+  it('shows the newest ten completed tool calls in the human activity log', () => {
+    render(<BearingApp />);
+
+    for (const ref of ['7A', '7B', '7C', '7D', '8A', '8B', '8C', '8D', '9A', '9B']) {
+      fireEvent.click(screen.getByRole('gridcell', { name: new RegExp(`Seat ${ref}`, 'i') }));
+    }
+
+    const log = within(screen.getByLabelText('Tool activity'));
+    expect(log.getAllByRole('listitem')).toHaveLength(10);
+    expect(log.getAllByText('a11y.describe')).toHaveLength(10);
+    expect(log.queryAllByText(/pending/)).toHaveLength(0);
+  });
+
+  it('compares exactly two through four current-query candidates without changing the booking selection', () => {
+    render(<BearingApp />);
+
+    const compareBoxes = screen.getAllByRole('checkbox', { name: /Compare Seat/i });
+    const comparisonColumnCount = () => within(within(screen.getByLabelText('Seat comparison')).getAllByRole('row')[0]).getAllByRole('columnheader').length;
+    fireEvent.click(compareBoxes[0]);
+    for (const expectedCandidates of [2, 3, 4]) {
+      fireEvent.click(compareBoxes[expectedCandidates - 1]);
+      fireEvent.click(screen.getByRole('button', { name: `Compare ${expectedCandidates} candidates` }));
+      expect(comparisonColumnCount()).toBe(expectedCandidates + 1);
+    }
+
+    const comparison = screen.getByLabelText('Seat comparison');
+    expect(comparison).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Current selection')).getByText('No seats selected')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Select seat 12A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo last selection' }));
+    expect(screen.getByLabelText('Seat comparison')).toBeInTheDocument();
+
+    fireEvent.click(compareBoxes[4]);
+    expect(compareBoxes[4]).not.toBeChecked();
+    expect(screen.getByRole('status')).toHaveTextContent('Choose up to four seats to compare.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
+    expect(screen.queryByLabelText('Seat comparison')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('checkbox', { name: /Compare Seat/i }).every((box) => !(box as HTMLInputElement).checked)).toBe(true);
+  });
+
+  it('maps the availability and quiet-car human filters to their query results', () => {
+    render(<BearingApp />);
+
+    const status = screen.getByRole('status');
+    const includeUnavailable = screen.getByLabelText('Include unavailable seats');
+    expect(includeUnavailable).toHaveClass('availability-filter-input');
+    expect(includeUnavailable).not.toBeChecked();
+    expect(screen.getAllByRole('checkbox', { name: /Compare Seat/i })[0]).toHaveClass('comparison-toggle-input');
+    fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
+    expect(status).toHaveTextContent('47 seats matched.');
+
+    fireEvent.click(includeUnavailable);
+    fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
+    expect(status).toHaveTextContent('60 seats matched.');
+
+    fireEvent.change(screen.getByLabelText('Quiet car'), { target: { value: 'non-quiet' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
+    expect(status).toHaveTextContent('0 seats matched.');
+
+    fireEvent.change(screen.getByLabelText('Quiet car'), { target: { value: 'quiet' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
+    expect(status).toHaveTextContent('60 seats matched.');
+  });
+
+  it('keeps details synchronized and unrelated actions usable when a draft is invalid', () => {
+    render(<BearingApp />);
+    document.querySelector('details')!.open = true;
+
+    fireEvent.change(screen.getByLabelText('Units'), { target: { value: 'steps' } });
+    fireEvent.change(screen.getByLabelText(/^Step length/), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('gridcell', { name: /Seat 7B/i }));
+    expect(screen.getByRole('heading', { name: 'Seat 12A' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Enter a step length greater than 0.');
+
+    fireEvent.change(screen.getByLabelText('Units'), { target: { value: 'feet' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
+    expect(screen.getByRole('status')).toHaveTextContent('47 seats matched.');
+
+    fireEvent.change(screen.getByLabelText(/^Walking speed/), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Show route' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Enter a walking speed greater than 0.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
+    expect(screen.getByRole('status')).toHaveTextContent('47 seats matched.');
+  });
+
+  it('keeps the last valid step length for an agent route after a later invalid human draft', async () => {
+    const registeredTools: Array<{ name: string; execute(input: Record<string, unknown>): Promise<unknown> }> = [];
+    document.modelContext = {
+      registerTool(definition) {
+        registeredTools.push(definition as unknown as { name: string; execute(input: Record<string, unknown>): Promise<unknown> });
+      },
+    };
+    render(<BearingApp />);
+    document.querySelector('details')!.open = true;
+    await waitFor(() => expect(registeredTools).toHaveLength(9));
+
+    fireEvent.change(screen.getByLabelText('Units'), { target: { value: 'steps' } });
+    fireEvent.change(screen.getByLabelText(/^Step length/), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/^Step length/), { target: { value: '0' } });
+
+    const routeTool = registeredTools.find((tool) => tool.name === 'a11y.get_route')!;
+    const result = await routeTool.execute({ from: 'entrance_front', to: '6-12A' }) as { data: { rendered: { unitsNote?: string } } };
+    expect(result.data.rendered.unitsNote).toContain('assumed 1 m stride');
+  });
+
+  it('lets the browser activate a focused seat once with Enter', async () => {
+    const user = userEvent.setup();
+    render(<BearingApp />);
+    const firstSeat = screen.getByRole('gridcell', { name: /Seat 7A/i });
+    firstSeat.focus();
+    const describeCount = () => screen.getAllByText('a11y.describe').length;
+    const before = describeCount();
+
+    await user.keyboard('{Enter}');
+
+    expect(describeCount()).toBe(before + 1);
+  });
+
+  it('announces every WebMCP capability state in an atomic status region', () => {
+    render(<BearingApp />);
+    const status = screen.getByRole('status');
+    expect(status).toHaveAttribute('aria-atomic', 'true');
+    expect(capabilityMessage('available')).toContain('Agent tools are available');
+    expect(capabilityMessage('insecure-context')).toContain('secure context');
+    expect(capabilityMessage('unsupported')).toContain('not supported');
+    expect(capabilityMessage('permission-denied')).toContain('permission was denied');
+    expect(capabilityMessage('security-rejected')).toContain('browser security');
+    expect(capabilityMessage('registration-failed')).toContain('could not register');
   });
 });

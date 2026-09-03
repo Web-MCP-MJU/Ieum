@@ -26,6 +26,20 @@ function snapshot(state: AppState): UndoSnapshot {
   };
 }
 
+function compactToolLog(entries: ToolLogEntry[]): ToolLogEntry[] {
+  const newestTerminalCallIds = new Set(
+    entries
+      .filter((entry) => entry.status !== 'pending')
+      .slice(-10)
+      .map((entry) => entry.callId),
+  );
+  return entries.filter((entry) => entry.status === 'pending' || newestTerminalCallIds.has(entry.callId));
+}
+
+function hasValidPositiveNumber(value: number | undefined): boolean {
+  return value === undefined || (Number.isFinite(value) && value > 0);
+}
+
 export function createBearingApplication(fixture: LoadedRailFixture, port: ConfirmationPort) {
   const store: Store = createStore({
     domain: 'rail',
@@ -54,20 +68,31 @@ export function createBearingApplication(fixture: LoadedRailFixture, port: Confi
       status: 'pending',
       startedAt: Date.now(),
     };
-    store.update((state) => ({ ...state, toolLog: [...state.toolLog, entry] }));
+    store.update((state) => ({ ...state, toolLog: compactToolLog([...state.toolLog, entry]) }));
     return entry.callId;
   };
   const finish = (
     callId: string,
     update: Partial<ToolLogEntry>,
     stateUpdate: Partial<AppState> = {},
-  ) => store.update((state) => ({
-    ...state,
-    ...stateUpdate,
-    toolLog: state.toolLog.map((entry) => entry.callId === callId
-      ? { ...entry, status: 'succeeded', completedAt: Date.now(), ...update }
-      : entry),
-  }));
+  ) => store.update((state) => {
+    const pendingEntry = state.toolLog.find((entry) => entry.callId === callId);
+    if (!pendingEntry) return { ...state, ...stateUpdate };
+    const completedEntry: ToolLogEntry = {
+      ...pendingEntry,
+      status: 'succeeded',
+      completedAt: Date.now(),
+      ...update,
+    };
+    return {
+      ...state,
+      ...stateUpdate,
+      toolLog: compactToolLog([
+        ...state.toolLog.filter((entry) => entry.callId !== callId),
+        completedEntry,
+      ]),
+    };
+  });
   const fail = (callId: string, error: unknown): never => {
     const domain = error instanceof DomainError;
     finish(callId, {
@@ -81,7 +106,19 @@ export function createBearingApplication(fixture: LoadedRailFixture, port: Confi
     getState: () => store.getState(),
     subscribe: (listener: () => void) => store.subscribe(listener),
     setPreferences(prefs: RenderInput) {
-      store.update((state) => ({ ...state, prefs: { ...state.prefs, ...prefs } }));
+      if (!hasValidPositiveNumber(prefs.stepLength_m) || !hasValidPositiveNumber(prefs.walkSpeedPercent)) {
+        throw new DomainError('INVALID_CRITERIA');
+      }
+      const { stepLength_m, walkSpeedPercent, ...otherPrefs } = prefs;
+      store.update((state) => ({
+        ...state,
+        prefs: {
+          ...state.prefs,
+          ...otherPrefs,
+          ...(stepLength_m === undefined ? {} : { stepLength_m }),
+          ...(walkSpeedPercent === undefined ? {} : { walkSpeedPercent }),
+        },
+      }));
     },
     getLayout(input: RenderInput = {}, options?: CallOptions) {
       const callId = begin('a11y.get_layout', input, options);
@@ -183,8 +220,14 @@ export function createBearingApplication(fixture: LoadedRailFixture, port: Confi
     async confirm(_input: Record<string, never> = {}, options?: CallOptions) {
       const callId = begin('a11y.confirm', {}, options);
       const state = store.getState();
-      if (state.confirmationStatus !== 'draft' || state.selection.length === 0) {
+      if (state.confirmationStatus !== 'draft') {
         return fail(callId, new DomainError('CONFIRMATION_REQUIRED'));
+      }
+      if (state.selection.length === 0) {
+        return fail(callId, new DomainError(
+          'CONFIRMATION_REQUIRED',
+          'Select at least one seat before confirming.',
+        ));
       }
 
       const before = snapshot(state);
@@ -206,7 +249,7 @@ export function createBearingApplication(fixture: LoadedRailFixture, port: Confi
         if (outcome === 'confirmed') {
           finish(callId, { outcome }, { confirmationStatus: 'confirmed', history: [] });
         } else {
-          finish(callId, { outcome }, { ...before });
+          finish(callId, { outcome, status: 'cancelled' }, { ...before });
         }
         return { outcome };
       } catch (error) {

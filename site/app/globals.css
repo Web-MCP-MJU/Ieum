@@ -159,6 +159,33 @@ select {
   font-weight: 700;
 }
 
+.filter-panel label.availability-filter,
+.candidate-list .comparison-toggle {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.filter-panel label.availability-filter {
+  margin-top: 16px;
+}
+
+.candidate-list .comparison-toggle {
+  margin: 4px 10px 8px;
+}
+
+.availability-filter-input,
+.comparison-toggle-input {
+  width: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
 .needs-fieldset,
 .preference-controls,
 .route-controls {
@@ -385,19 +412,42 @@ button:disabled {
   color: #fff;
 }
 
-.route-overlay {
+.route-overlay,
+.route-marker-overlay {
   position: absolute;
-  z-index: 1;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
 }
 
+.route-overlay {
+  z-index: 1;
+}
+
+.route-marker-overlay {
+  z-index: 3;
+}
+
 .route-overlay line {
   stroke: #005a78;
   stroke-linecap: round;
-  stroke-width: 10;
+  stroke-width: 6;
+}
+
+.route-endpoint-halo,
+.route-endpoint-marker {
+  fill: none;
+}
+
+.route-endpoint-halo {
+  stroke: #fff;
+  stroke-width: 8;
+}
+
+.route-endpoint-marker {
+  stroke: #005a78;
+  stroke-width: 4;
 }
 
 .route-summary {

@@ -7,9 +7,35 @@ import { Check, MapPin, RotateCcw, Route as RouteIcon, Search, Sparkles } from '
 import { createBearingApplication, type BearingApplication, type ConfirmationOutcome } from '@/src/application/use-cases';
 import { railFixture } from '@/src/data/fixture';
 import type { Comparison, Description, RailCandidate } from '@/src/domain/types';
+import { RouteOverlay } from '@/src/ui/RouteOverlay';
 import { registerBearingTools, type DocumentWithModelContext, type WebMCPCapability } from '@/src/webmcp/register';
 
 type PendingConfirmation = { resolve(value: ConfirmationOutcome): void; reject(reason?: unknown): void };
+
+type QuietCarFilter = 'any' | 'quiet' | 'non-quiet';
+
+const routePoints = new Map([
+  ...railFixture.seats.map((item) => [item.ref, item.position_m] as const),
+  ...railFixture.landmarks.map((item) => [item.key, item.position_m] as const),
+  ...railFixture.referencePoints.map((item) => [item.ref, item.position_m] as const),
+  ...railFixture.aisleAnchors.map((item) => [item.ref, item.position_m] as const),
+]);
+
+function positiveNumber(value: string): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+export function capabilityMessage(capability: WebMCPCapability): string {
+  switch (capability) {
+    case 'available': return 'WebMCP connected. Agent tools are available.';
+    case 'insecure-context': return 'WebMCP requires a secure context. Human controls remain available.';
+    case 'unsupported': return 'WebMCP is not supported in this browser. Human controls remain available.';
+    case 'permission-denied': return 'WebMCP permission was denied. Human controls remain available.';
+    case 'security-rejected': return 'WebMCP was blocked by browser security. Human controls remain available.';
+    case 'registration-failed': return 'WebMCP tools could not register. Human controls remain available.';
+  }
+}
 
 function createConfirmationBroker(onOpen: () => void, onClose: () => void) {
   let pending: PendingConfirmation | null = null;
@@ -43,6 +69,10 @@ export function BearingApp() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const confirmTriggerRef = useRef<HTMLButtonElement>(null);
+  const carStageRef = useRef<HTMLDivElement>(null);
+  const seatGridRef = useRef<HTMLDivElement>(null);
+  const routeSummaryRef = useRef<HTMLElement>(null);
+  const focusRouteSummaryRef = useRef(false);
   const restoreConfirmationFocusRef = useRef(false);
   const [confirmation] = useState(() => createConfirmationBroker(
     () => setDialogOpen(true),
@@ -59,8 +89,11 @@ export function BearingApp() {
   const [activeRef, setActiveRef] = useState('6-12A');
   const [description, setDescription] = useState<Description | null>(() => app.describe({ ref: '6-12A' }));
   const [comparison, setComparison] = useState<Comparison | null>(null);
+  const [comparisonRefs, setComparisonRefs] = useState<Set<string>>(() => new Set());
   const [facing, setFacing] = useState('any');
   const [side, setSide] = useState('any');
+  const [includeUnavailable, setIncludeUnavailable] = useState(false);
+  const [quietCar, setQuietCar] = useState<QuietCarFilter>('any');
   const [minimumFootSpace, setMinimumFootSpace] = useState('');
   const [near, setNear] = useState('');
   const [maximumDistance, setMaximumDistance] = useState('');
@@ -84,22 +117,44 @@ export function BearingApp() {
   );
 
   useEffect(() => {
+    const owner = new AbortController();
+    let active = true;
     let dispose = () => {};
-    void registerBearingTools(document as DocumentWithModelContext, app).then((registration) => {
+    void registerBearingTools(document as DocumentWithModelContext, app, { signal: owner.signal }).then((registration) => {
+      if (!active) {
+        registration.dispose();
+        return;
+      }
       setCapability(registration.capability);
       dispose = () => registration.dispose();
     });
-    return () => dispose();
+    return () => {
+      active = false;
+      owner.abort();
+      dispose();
+    };
   }, [app]);
 
   useEffect(() => {
+    const validStepLength = positiveNumber(stepLength);
+    const validWalkSpeedPercent = positiveNumber(walkSpeedPercent);
     app.setPreferences({
       units,
-      stepLength_m: Number(stepLength) || 0.75,
       directionStyle,
-      walkSpeedPercent: Number(walkSpeedPercent) || 100,
+      ...(validStepLength === undefined ? {} : { stepLength_m: validStepLength }),
+      ...(validWalkSpeedPercent === undefined ? {} : { walkSpeedPercent: validWalkSpeedPercent }),
     });
   }, [app, directionStyle, stepLength, units, walkSpeedPercent]);
+
+  const validStepLength = positiveNumber(stepLength);
+  const validWalkSpeedPercent = positiveNumber(walkSpeedPercent);
+  const hasInvalidStepDraft = units === 'steps' && validStepLength === undefined;
+  const renderInput = {
+    units,
+    directionStyle,
+    stepLength_m: validStepLength ?? state.prefs.stepLength_m,
+    walkSpeedPercent: validWalkSpeedPercent ?? state.prefs.walkSpeedPercent,
+  };
 
   useEffect(() => {
     if (!dialogOpen) return;
@@ -121,13 +176,25 @@ export function BearingApp() {
     }
   }, [dialogOpen, state.confirmationStatus]);
 
+  useEffect(() => {
+    if (!state.activeRoute || !focusRouteSummaryRef.current) return;
+    focusRouteSummaryRef.current = false;
+    routeSummaryRef.current?.focus();
+  }, [state.activeRoute]);
+
   const runQuery = () => {
+    if (hasInvalidStepDraft) {
+      setAnnouncement('Enter a step length greater than 0.');
+      return;
+    }
     try {
       const query = app.query({
         rail: {
           ...(facing === 'any' ? {} : { facing: facing as 'forward' | 'backward' }),
           ...(side === 'any' ? {} : { side: side as 'window' | 'aisle' }),
+          ...(quietCar === 'any' ? {} : { quietCar: quietCar === 'quiet' }),
         },
+        availableOnly: !includeUnavailable,
         ...(near ? { near, ...(maximumDistance ? { maxDistance_m: Number(maximumDistance) } : {}) } : {}),
         ...(maximumPrice ? { priceMax_usd: Number(maximumPrice) } : {}),
         needs: {
@@ -137,21 +204,24 @@ export function BearingApp() {
           ...(movableArmrest ? { movableArmrest: true } : {}),
           ...(excludeExitRow ? { excludeExitRow: true } : {}),
         },
-        units,
-        stepLength_m: Number(stepLength) || 0.75,
-        directionStyle,
-        walkSpeedPercent: Number(walkSpeedPercent) || 100,
+        ...renderInput,
       });
       setResults(query.data.items);
+      setComparisonRefs(new Set());
+      setComparison(null);
       setAnnouncement(`${query.data.totalMatched} seats matched. Showing ${query.data.items.length}.`);
     } catch (error) { setAnnouncement(errorMessage(error)); }
   };
 
   const inspect = (ref: string) => {
+    if (hasInvalidStepDraft) {
+      setAnnouncement('Enter a step length greater than 0.');
+      return;
+    }
     setActiveRef(ref);
     setRouteTo(ref);
     try {
-      setDescription(app.describe({ ref }));
+      setDescription(app.describe({ ref, ...renderInput }));
       setAnnouncement(`${ref} details opened.`);
     } catch (error) { setAnnouncement(errorMessage(error)); }
   };
@@ -164,24 +234,49 @@ export function BearingApp() {
   };
 
   const showRoute = () => {
+    if (hasInvalidStepDraft) {
+      setAnnouncement('Enter a step length greater than 0.');
+      return;
+    }
+    if (validWalkSpeedPercent === undefined) {
+      setAnnouncement('Enter a walking speed greater than 0.');
+      return;
+    }
     try {
+      focusRouteSummaryRef.current = true;
       app.getRoute({
         from: routeFrom,
         to: routeTo,
-        units,
-        stepLength_m: Number(stepLength) || 0.75,
-        directionStyle,
-        walkSpeedPercent: Number(walkSpeedPercent) || 100,
+        ...renderInput,
       });
       setAnnouncement(`Route from ${routeFrom} to ${routeTo} is ready.`);
+    } catch (error) {
+      focusRouteSummaryRef.current = false;
+      setAnnouncement(errorMessage(error));
+    }
+  };
+
+  const compareCandidates = () => {
+    const refs = [...comparisonRefs];
+    if (refs.length < 2) {
+      setAnnouncement('Choose two to four seats to compare.');
+      return;
+    }
+    try {
+      setComparison(app.compare({ refs, ...renderInput }));
+      setAnnouncement('Candidates are ready to compare.');
     } catch (error) { setAnnouncement(errorMessage(error)); }
   };
 
-  const compareSelected = () => {
-    try {
-      setComparison(app.compare({ refs: state.selection.slice(0, 4) }));
-      setAnnouncement('Selected seats are ready to compare.');
-    } catch (error) { setAnnouncement(errorMessage(error)); }
+  const toggleComparison = (ref: string, checked: boolean) => {
+    if (checked && comparisonRefs.size >= 4) {
+      setAnnouncement('Choose up to four seats to compare.');
+      return;
+    }
+    const next = new Set(comparisonRefs);
+    if (checked) next.add(ref);
+    else next.delete(ref);
+    setComparisonRefs(next);
   };
 
   const moveGridFocus = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -198,7 +293,6 @@ export function BearingApp() {
       inspect(railFixture.seats[next].ref);
       document.getElementById(`seat-${railFixture.seats[next].ref}`)?.focus();
     }
-    if (event.key === 'Enter') inspect(railFixture.seats[index].ref);
     if (event.key === ' ') {
       event.preventDefault();
       const seat = railFixture.seats[index];
@@ -229,25 +323,18 @@ export function BearingApp() {
     ...contextChoices,
     ...railFixture.seats.map((item) => ({ ref: item.ref, label: `Seat ${item.row}${item.seatLetter}` })),
   ];
-  const point = new Map([
-    ...railFixture.seats.map((item) => [item.ref, item.position_m] as const),
-    ...railFixture.landmarks.map((item) => [item.key, item.position_m] as const),
-    ...railFixture.referencePoints.map((item) => [item.ref, item.position_m] as const),
-    ...railFixture.aisleAnchors.map((item) => [item.ref, item.position_m] as const),
-  ]);
-
   return (
-    <main aria-label="Bearing rail workspace" className="app-shell">
+    <main aria-label="Ieum rail workspace" className="app-shell">
       <div inert={dialogOpen ? true : undefined}>
         <header className="site-header">
           <div>
             <p className="eyebrow">Spatial accessibility bridge</p>
-            <h1>Bearing</h1>
+            <h1>Ieum</h1>
             <p className="subtitle">Interrogate the space. Keep the decision yours.</p>
           </div>
           <div className={`capability capability-${capability}`}>
             <Sparkles aria-hidden="true" size={16} />
-            {capability === 'available' ? 'WebMCP connected' : 'Human controls ready'}
+            {capabilityMessage(capability)}
           </div>
         </header>
 
@@ -256,6 +343,8 @@ export function BearingApp() {
             <div className="panel-heading"><Search aria-hidden="true" /><div><p className="eyebrow">01 · Discover</p><h2 id="filters-title">Find a seat</h2></div></div>
             <label>Facing<select value={facing} onChange={(event) => setFacing(event.target.value)}><option value="any">Any direction</option><option value="forward">Forward</option><option value="backward">Backward</option></select></label>
             <label>Position<select value={side} onChange={(event) => setSide(event.target.value)}><option value="any">Window or aisle</option><option value="window">Window</option><option value="aisle">Aisle</option></select></label>
+            <label>Quiet car<select value={quietCar} onChange={(event) => setQuietCar(event.target.value as QuietCarFilter)}><option value="any">Any</option><option value="quiet">Quiet</option><option value="non-quiet">Non-quiet</option></select></label>
+            <label className="availability-filter"><input className="availability-filter-input" type="checkbox" checked={includeUnavailable} onChange={(event) => setIncludeUnavailable(event.target.checked)} />Include unavailable seats</label>
             <label>Near<select value={near} onChange={(event) => setNear(event.target.value)}><option value="">Anywhere in the car</option>{contextChoices.map((item) => <option value={item.ref} key={item.ref}>{item.label}</option>)}</select></label>
             <label>Maximum walking distance<input inputMode="decimal" min="0" disabled={!near} value={maximumDistance} onChange={(event) => setMaximumDistance(event.target.value)} placeholder="meters" /></label>
             <label>Maximum price<input inputMode="decimal" min="0" value={maximumPrice} onChange={(event) => setMaximumPrice(event.target.value)} placeholder="USD" /></label>
@@ -265,21 +354,21 @@ export function BearingApp() {
             <button className="primary-action" type="button" onClick={runQuery}><Search aria-hidden="true" size={18} />Find matching seats</button>
             <p className="result-count"><strong>{results.length}</strong> candidates shown</p>
             <ol className="candidate-list">
-              {results.map((candidate) => <li key={candidate.ref}><button type="button" onClick={() => inspect(candidate.ref)} aria-current={candidate.ref === activeRef ? 'true' : undefined}><span>{candidate.label}</span><small>${candidate.price_usd} · {candidate.rail.side}</small></button></li>)}
+              {results.map((candidate) => <li key={candidate.ref}><button type="button" onClick={() => inspect(candidate.ref)} aria-current={candidate.ref === activeRef ? 'true' : undefined}><span>{candidate.label}</span><small>${candidate.price_usd} · {candidate.rail.side}</small></button><label className="comparison-toggle"><input className="comparison-toggle-input" type="checkbox" checked={comparisonRefs.has(candidate.ref)} onChange={(event) => toggleComparison(candidate.ref, event.target.checked)} />Compare {candidate.label}</label></li>)}
             </ol>
           </aside>
 
           <section className="panel layout-panel" aria-labelledby="layout-title">
             <div className="layout-header"><div><p className="eyebrow">02 · Understand</p><h2 id="layout-title">Car 6 · Business Class</h2><p><strong>60 seats</strong> · <span className="available-copy">47 available</span> · Quiet car</p></div><MapPin aria-hidden="true" size={28} /></div>
-            <div className="car-stage">
-              {state.activeRoute && <svg className="route-overlay" viewBox="0 0 310 2640" aria-label={`Route from ${state.activeRoute.from} to ${state.activeRoute.to}`}>
-                {state.activeRoute.segments.map((segment) => {
-                  const from = point.get(segment.from); const to = point.get(segment.to);
-                  return from && to ? <line key={`${segment.from}-${segment.to}`} x1={from.x * 100} y1={from.y * 100} x2={to.x * 100} y2={to.y * 100} /> : null;
-                })}
-              </svg>}
+            <div ref={carStageRef} className="car-stage">
+              {state.activeRoute && <RouteOverlay
+                route={state.activeRoute}
+                points={routePoints}
+                stageRef={carStageRef}
+                gridRef={seatGridRef}
+              />}
               <div className="car-nose">FRONT ENTRANCE</div>
-              <div role="grid" aria-label="Car 6 seat grid" className="seat-grid">
+              <div ref={seatGridRef} role="grid" aria-label="Car 6 seat grid" className="seat-grid">
                 {Array.from({ length: 15 }, (_, rowIndex) => (
                   <div role="row" className="seat-row" key={rowIndex + 7}>
                     <span className="row-number" aria-hidden="true">{rowIndex + 7}</span>
@@ -306,7 +395,7 @@ export function BearingApp() {
               </div>
               <div className="car-nose rear">REAR · CAFÉ · RESTROOM</div>
             </div>
-            {state.activeRoute && <section className="route-summary" aria-label="Active route"><h3><RouteIcon aria-hidden="true" size={18} />Route to {state.activeRoute.requestedTo}</h3><ol>{state.activeRoute.rendered.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className="route-total">{state.activeRoute.rendered.summary}</p></section>}
+            {state.activeRoute && <section ref={routeSummaryRef} className="route-summary" aria-label="Active route" tabIndex={-1}><h3><RouteIcon aria-hidden="true" size={18} />Route to {state.activeRoute.requestedTo}</h3><ol>{state.activeRoute.rendered.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className="route-total">{state.activeRoute.rendered.summary}</p></section>}
           </section>
 
           <aside className="right-column">
@@ -321,16 +410,16 @@ export function BearingApp() {
               <div className="panel-heading"><Check aria-hidden="true" /><div><p className="eyebrow">Your decision</p><h2>Selected seats</h2></div></div>
               {state.selection.length ? <ul>{state.selection.map((ref) => <li key={ref}><strong>{ref}</strong><span>${railFixture.seats.find((seat) => seat.ref === ref)?.price_usd}</span></li>)}</ul> : <p>No seats selected</p>}
               <p className="selection-total"><span>Total</span><strong>${state.priceTotal_usd}</strong></p>
-              <div className="action-stack"><button className="secondary-action" type="button" disabled={!state.history.length || state.confirmationStatus !== 'draft'} onClick={() => { try { app.undo(); setAnnouncement('Last selection undone.'); } catch (error) { setAnnouncement(errorMessage(error)); } }}><RotateCcw aria-hidden="true" size={18} />Undo last selection</button><button type="button" className="secondary-action" disabled={state.selection.length < 2} onClick={compareSelected}>Compare selected</button><button ref={confirmTriggerRef} className="confirm-action" type="button" disabled={!state.selection.length || state.confirmationStatus !== 'draft'} onClick={() => { void app.confirm().then(({ outcome }) => setAnnouncement(`Selection ${outcome}.`)).catch((error: unknown) => setAnnouncement(errorMessage(error))); }}>Review and confirm</button></div>
+              <div className="action-stack"><button className="secondary-action" type="button" disabled={!state.history.length || state.confirmationStatus !== 'draft'} onClick={() => { try { app.undo(); setAnnouncement('Last selection undone.'); } catch (error) { setAnnouncement(errorMessage(error)); } }}><RotateCcw aria-hidden="true" size={18} />Undo last selection</button><button type="button" className="secondary-action" disabled={comparisonRefs.size < 2} onClick={compareCandidates}>Compare {comparisonRefs.size} candidates</button><button ref={confirmTriggerRef} className="confirm-action" type="button" disabled={!state.selection.length || state.confirmationStatus !== 'draft'} onClick={() => { void app.confirm().then(({ outcome }) => setAnnouncement(`Selection ${outcome}.`)).catch((error: unknown) => setAnnouncement(errorMessage(error))); }}>Review and confirm</button></div>
             </section>
 
             {comparison && <section className="panel comparison-panel" aria-label="Seat comparison"><h2>Comparison</h2><div className="comparison-scroll"><table><thead><tr><th>Seat</th>{comparison.rows.map((row) => <th key={row.ref}>{row.ref}</th>)}</tr></thead><tbody>{comparison.axes.slice(0, 5).map((axis) => <tr key={axis.key}><th>{axis.label}</th>{comparison.rows.map((row) => <td key={row.ref}>{String(row.values[axis.key])}</td>)}</tr>)}</tbody></table></div></section>}
 
-            <section className="panel tool-log" aria-label="Tool activity"><p className="eyebrow">Shared activity</p><h2>Human + Agent log</h2><ol>{state.toolLog.slice(-6).reverse().map((entry) => <li key={entry.callId}><span>{entry.name}</span><small>{entry.origin} · {entry.status}</small></li>)}</ol></section>
+            <section className="panel tool-log" aria-label="Tool activity"><p className="eyebrow">Shared activity</p><h2>Human + Agent log</h2><ol>{state.toolLog.slice(-10).reverse().map((entry) => <li key={entry.callId}><span>{entry.name}</span><small>{entry.origin} · {entry.status}</small></li>)}</ol></section>
           </aside>
         </section>
       </div>
-      <p className="sr-only" aria-live="polite">{announcement}</p>
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       {dialogOpen && <div className="dialog-backdrop"><dialog ref={dialogRef} aria-modal="true" aria-labelledby="confirm-title" className="confirmation-dialog" onCancel={(event) => { event.preventDefault(); settleConfirmation('cancelled'); }}><p className="eyebrow">Human confirmation required</p><h2 id="confirm-title">Confirm {state.selection.length} selected {state.selection.length === 1 ? 'seat' : 'seats'}?</h2><p>This demo does not book or charge anything. Your action only confirms the current local decision.</p><p className="dialog-total">Total · ${state.priceTotal_usd}</p><div className="dialog-actions"><button type="button" className="secondary-action" autoFocus onClick={() => settleConfirmation('cancelled')}>Keep reviewing</button><button type="button" className="confirm-action" onClick={() => settleConfirmation('confirmed')}>Confirm selection</button></div></dialog></div>}
     </main>
   );

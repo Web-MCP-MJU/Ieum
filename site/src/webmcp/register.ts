@@ -22,6 +22,7 @@ export type DocumentWithModelContext = {
 
 export type WebMCPCapability =
   | 'available'
+  | 'insecure-context'
   | 'unsupported'
   | 'permission-denied'
   | 'security-rejected'
@@ -100,22 +101,38 @@ function definitions(app: BearingApplication): ToolDefinition[] {
 export async function registerBearingTools(
   documentLike: DocumentWithModelContext,
   app: BearingApplication,
+  options: { signal?: AbortSignal } = {},
 ): Promise<{ capability: WebMCPCapability; dispose(): void }> {
+  if (globalThis.isSecureContext === false) {
+    return { capability: 'insecure-context', dispose() {} };
+  }
   if (!documentLike.modelContext?.registerTool) {
     return { capability: 'unsupported', dispose() {} };
   }
-  const controller = new AbortController();
+
+  const registration = new AbortController();
+  const abortRegistration = () => registration.abort();
+  if (options.signal?.aborted) abortRegistration();
+  else options.signal?.addEventListener('abort', abortRegistration, { once: true });
+  const finish = (capability: WebMCPCapability) => {
+    options.signal?.removeEventListener('abort', abortRegistration);
+    return { capability, dispose: abortRegistration };
+  };
+
   try {
     for (const definition of definitions(app)) {
-      await documentLike.modelContext.registerTool(definition, { signal: controller.signal });
+      if (registration.signal.aborted) return finish('available');
+      await documentLike.modelContext.registerTool(definition, { signal: registration.signal });
+      if (registration.signal.aborted) return finish('available');
     }
-    return { capability: 'available', dispose: () => controller.abort() };
+    return finish('available');
   } catch (error) {
-    controller.abort();
+    if (registration.signal.aborted) return finish('available');
+    registration.abort();
     const name = error instanceof Error ? error.name : '';
     const capability: WebMCPCapability = name === 'NotAllowedError'
       ? 'permission-denied'
       : name === 'SecurityError' ? 'security-rejected' : 'registration-failed';
-    return { capability, dispose() {} };
+    return finish(capability);
   }
 }

@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createBearingApplication } from '@/src/application/use-cases';
 import { railFixture } from '@/src/data/fixture';
 import { DomainError } from '@/src/domain/errors';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('Bearing application', () => {
   it('projects query, route, selection, and undo through one state', async () => {
@@ -95,5 +99,97 @@ describe('Bearing application', () => {
     expect(app.getState()).toMatchObject({
       confirmationStatus: 'draft', selection: ['6-12A'], highlightedRefs: ['6-12A'],
     });
+  });
+
+  it('rejects invalid rendering preferences without replacing stored valid preferences', () => {
+    const app = createBearingApplication(railFixture, { open: async () => 'confirmed' });
+    const original = app.getState().prefs;
+
+    expect(() => app.setPreferences({ stepLength_m: 0 })).toThrow(
+      expect.objectContaining<Partial<DomainError>>({ code: 'INVALID_CRITERIA' }),
+    );
+    expect(() => app.setPreferences({ walkSpeedPercent: Number.POSITIVE_INFINITY })).toThrow(
+      expect.objectContaining<Partial<DomainError>>({ code: 'INVALID_CRITERIA' }),
+    );
+    expect(app.getState().prefs).toEqual(original);
+  });
+
+  it('preserves stored numeric preferences when a partial update explicitly leaves them undefined', () => {
+    const app = createBearingApplication(railFixture, { open: async () => 'confirmed' });
+    app.setPreferences({ stepLength_m: 1.2, walkSpeedPercent: 85 });
+
+    app.setPreferences({ units: 'meters', stepLength_m: undefined, walkSpeedPercent: undefined });
+    expect(app.getState().prefs).toEqual(expect.objectContaining({
+      units: 'meters', stepLength_m: 1.2, walkSpeedPercent: 85,
+    }));
+
+    const beforeInvalidUpdate = app.getState().prefs;
+    expect(() => app.setPreferences({ directionStyle: 'clock', stepLength_m: 0 })).toThrow(
+      expect.objectContaining<Partial<DomainError>>({ code: 'INVALID_CRITERIA' }),
+    );
+    expect(app.getState().prefs).toEqual(beforeInvalidUpdate);
+  });
+
+  it('keeps the confirmation wire code while explaining an empty selection', async () => {
+    const app = createBearingApplication(railFixture, { open: async () => 'confirmed' });
+
+    await expect(app.confirm()).rejects.toMatchObject({
+      code: 'CONFIRMATION_REQUIRED',
+      message: 'Select at least one seat before confirming.',
+    });
+  });
+
+  it('records a human confirmation cancellation as cancelled', async () => {
+    const app = createBearingApplication(railFixture, { open: async () => 'cancelled' });
+    app.select({ ref: '6-12A' });
+
+    await expect(app.confirm()).resolves.toEqual({ outcome: 'cancelled' });
+    expect(app.getState().toolLog.at(-1)).toMatchObject({
+      name: 'a11y.confirm', status: 'cancelled', outcome: 'cancelled',
+    });
+  });
+
+  it('retains only the newest ten completed calls', () => {
+    let now = 0;
+    vi.spyOn(Date, 'now').mockImplementation(() => ++now);
+    const app = createBearingApplication(railFixture, { open: async () => 'confirmed' });
+
+    app.getLayout();
+    const firstCallId = app.getState().toolLog[0]!.callId;
+    for (let call = 0; call < 10; call += 1) app.getLayout();
+
+    expect(app.getState().toolLog).toHaveLength(10);
+    expect(app.getState().toolLog).not.toContainEqual(expect.objectContaining({ callId: firstCallId }));
+    expect(app.getState().toolLog.every((entry) => entry.status !== 'pending')).toBe(true);
+  });
+
+  it('retains a pending confirmation through later calls and completes that same entry', async () => {
+    let now = 0;
+    vi.spyOn(Date, 'now').mockImplementation(() => ++now);
+    let settle!: (outcome: 'confirmed' | 'cancelled') => void;
+    const app = createBearingApplication(railFixture, {
+      open: () => new Promise((resolve) => { settle = resolve; }),
+    });
+    app.select({ ref: '6-12A' });
+    const pending = app.confirm();
+    const confirmationCallId = app.getState().toolLog.at(-1)!.callId;
+
+    for (let call = 0; call < 10; call += 1) app.getLayout();
+
+    expect(app.getState().toolLog).toHaveLength(11);
+    expect(app.getState().toolLog).toContainEqual(expect.objectContaining({
+      callId: confirmationCallId,
+      status: 'pending',
+    }));
+
+    settle('cancelled');
+    await expect(pending).resolves.toEqual({ outcome: 'cancelled' });
+
+    expect(app.getState().toolLog).toHaveLength(10);
+    expect(app.getState().toolLog).toContainEqual(expect.objectContaining({
+      callId: confirmationCallId,
+      status: 'cancelled',
+      outcome: 'cancelled',
+    }));
   });
 });

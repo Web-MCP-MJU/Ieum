@@ -4,7 +4,7 @@ import '@fontsource/atkinson-hyperlegible/700.css';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Bearing — Rail spatial accessibility',
+  title: 'Ieum — Rail spatial accessibility',
   description:
     'Explore, compare, route to, and select seats through one accessible human and agent interface.',
 };
