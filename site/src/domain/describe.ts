@@ -55,9 +55,19 @@ export function describeRef(
       : `${label} is a stable reference in the current layout.`,
     attributes,
     relations,
+    // Architecture section 5 calls these "named next questions". They are put to
+    // the traveler, not to the reader of a screen: a blind traveler deciding by ear
+    // needs the conversation carried forward, not a list of things they could type.
     followUps: seat
-      ? ['Ask for the route from the front entrance.', 'Compare this seat with another candidate.']
-      : ['Ask for nearby available seats.', 'Ask for a route to this reference.'],
+      ? [
+          'Would you like the walking route from the front entrance to this seat?',
+          'Shall I compare this seat with another one?',
+          'Do you want the distance in steps instead of feet?',
+        ]
+      : [
+          'Would you like the available seats closest to this?',
+          'Shall I give you the walking route to it?',
+        ],
     ...(options.units === 'steps' ? { unitsNote: renderDistance(0, options).unitsNote } : {}),
   };
 }
