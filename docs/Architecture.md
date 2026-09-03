@@ -205,7 +205,7 @@ type RailFixture = {
 };
 ```
 
-The machine-valid Draft 2020-12 source contract is [bearing-rail-fixture.schema.json](./contracts/bearing-rail-fixture.schema.json). Bootstrap validates schema first, then cross-field invariants before creating Domain state: exactly 60 seats and 47 available; one shared unique ref namespace across seats, landmark keys, reference points, and aisle anchors; unique edge IDs; finite coordinates inside bounds; valid non-self edge endpoints; positive edge length; only `traversable: true` edges admitted; every seat and required landmark reachable from `entrance_front`; no duplicate row/seat-letter pair; and all public authored text within schema bounds. For every ordered pair of routable seat, landmark, reference-point, and aisle-anchor refs, the validator also simulates §7 continuation after merge: a route longer than four segments must have a non-origin `stableCheckpoint` reference-point or aisle-anchor endpoint within segments 1–4 that strictly decreases remaining path length; choosing the furthest such endpoint must make each successive leg progress, never reuse a checkpoint, and terminate at the requested destination within the finite graph. A malformed fixture renders the bootstrap error state and registers zero tools.
+The machine-valid Draft 2020-12 source contract is [ieum-rail-fixture.schema.json](./contracts/ieum-rail-fixture.schema.json). Bootstrap validates schema first, then cross-field invariants before creating Domain state: exactly 60 seats and 47 available; one shared unique ref namespace across seats, landmark keys, reference points, and aisle anchors; unique edge IDs; finite coordinates inside bounds; valid non-self edge endpoints; positive edge length; only `traversable: true` edges admitted; every seat and required landmark reachable from `entrance_front`; no duplicate row/seat-letter pair; and all public authored text within schema bounds. For every ordered pair of routable seat, landmark, reference-point, and aisle-anchor refs, the validator also simulates §7 continuation after merge: a route longer than four segments must have a non-origin `stableCheckpoint` reference-point or aisle-anchor endpoint within segments 1–4 that strictly decreases remaining path length; choosing the furthest such endpoint must make each successive leg progress, never reuse a checkpoint, and terminate at the requested destination within the finite graph. A malformed fixture renders the bootstrap error state and registers zero tools.
 
 ```ts
 type LandmarkType =
@@ -1204,7 +1204,7 @@ site/
 docs/
 ├─ contracts/
 │  ├─ ieum-output.schema.json
-│  └─ bearing-rail-fixture.schema.json
+│  └─ ieum-rail-fixture.schema.json
 └─ evidence/demo-runtime.json
 ```
 

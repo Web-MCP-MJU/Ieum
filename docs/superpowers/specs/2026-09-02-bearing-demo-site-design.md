@@ -8,7 +8,7 @@ Authority order for implementation decisions:
 
 1. Current WebMCP draft and official challenge rules for API and submission facts.
 2. `docs/PRD v0.3.md` for product intent and complete scope.
-3. `docs/Architecture.md`, `docs/contracts/bearing-output.schema.json`, and `docs/contracts/bearing-rail-fixture.schema.json` for technical contracts.
+3. `docs/Architecture.md`, `docs/contracts/bearing-output.schema.json`, and `docs/contracts/ieum-rail-fixture.schema.json` for technical contracts.
 4. Root `DESIGN.md` for normative visual tokens and visual-component rules.
 
 The site uses Google Labs' current alpha `DESIGN.md` format: normative YAML tokens plus the canonical prose section sequence. The implementation maps those tokens to shared CSS custom properties and validates the source document with `@google/design.md`.
@@ -83,7 +83,7 @@ WebMCP Adapter
 - **WebMCP Adapter:** capability detection, nine top-level registrations, lifecycle/cancellation, and plain JSON results only.
 - **UI:** consumes Application directly; it never calls public tools and never recalculates route geometry.
 
-The site has no server state or authentication. Mutable demo state is in-memory browser-local state and resets on reload. Bootstrap validates `docs/contracts/bearing-rail-fixture.schema.json` plus the Architecture's cross-field invariants before Domain or Adapter creation. A malformed fixture renders recovery UI and exposes zero tools. No third-party operator API, diagram, screenshot, or proprietary dataset is used.
+The site has no server state or authentication. Mutable demo state is in-memory browser-local state and resets on reload. Bootstrap validates `docs/contracts/ieum-rail-fixture.schema.json` plus the Architecture's cross-field invariants before Domain or Adapter creation. A malformed fixture renders recovery UI and exposes zero tools. No third-party operator API, diagram, screenshot, or proprietary dataset is used.
 
 Atkinson Hyperlegible is installed from a pinned `@fontsource/atkinson-hyperlegible` package and served from the application bundle; the site makes no runtime font-CDN request. Icons come only from a pinned `lucide-react` package and are bundled. `THIRD_PARTY_NOTICES.md` records exact package version, upstream URL, detected package license, font/icon asset license, and included license-file path after dependencies are locked. Missing or incompatible license evidence blocks deployment and causes the implementation to fall back to system fonts or text-only controls rather than substituting an unverified asset.
 
