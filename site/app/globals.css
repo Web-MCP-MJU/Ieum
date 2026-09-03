@@ -159,6 +159,32 @@ select {
   font-weight: 700;
 }
 
+.filter-panel label.availability-filter,
+.candidate-list .comparison-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.filter-panel label.availability-filter {
+  margin-top: 16px;
+}
+
+.candidate-list .comparison-toggle {
+  margin: 4px 10px 8px;
+}
+
+.availability-filter-input,
+.comparison-toggle-input {
+  width: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
 .needs-fieldset,
 .preference-controls,
 .route-controls {

@@ -74,15 +74,20 @@ describe('Ieum working surface', () => {
     expect(signals[0].aborted).toBe(true);
   });
 
-  it('compares two to four current-query candidates without changing the booking selection', () => {
+  it('compares exactly two through four current-query candidates without changing the booking selection', () => {
     render(<BearingApp />);
 
     const compareBoxes = screen.getAllByRole('checkbox', { name: /Compare Seat/i });
-    for (const box of compareBoxes.slice(0, 4)) fireEvent.click(box);
-    fireEvent.click(screen.getByRole('button', { name: 'Compare 4 candidates' }));
+    const comparisonColumnCount = () => within(within(screen.getByLabelText('Seat comparison')).getAllByRole('row')[0]).getAllByRole('columnheader').length;
+    fireEvent.click(compareBoxes[0]);
+    for (const expectedCandidates of [2, 3, 4]) {
+      fireEvent.click(compareBoxes[expectedCandidates - 1]);
+      fireEvent.click(screen.getByRole('button', { name: `Compare ${expectedCandidates} candidates` }));
+      expect(comparisonColumnCount()).toBe(expectedCandidates + 1);
+    }
 
     const comparison = screen.getByLabelText('Seat comparison');
-    expect(within(within(comparison).getAllByRole('row')[0]).getAllByRole('columnheader')).toHaveLength(5);
+    expect(comparison).toBeInTheDocument();
     expect(within(screen.getByLabelText('Current selection')).getByText('No seats selected')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Select seat 12A' }));
     fireEvent.click(screen.getByRole('button', { name: 'Undo last selection' }));
@@ -90,7 +95,7 @@ describe('Ieum working surface', () => {
 
     fireEvent.click(compareBoxes[4]);
     expect(compareBoxes[4]).not.toBeChecked();
-    expect(screen.getByRole('status')).toHaveTextContent('Choose up to four candidates to compare.');
+    expect(screen.getByRole('status')).toHaveTextContent('Choose up to four seats to compare.');
 
     fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
     expect(screen.queryByLabelText('Seat comparison')).not.toBeInTheDocument();
@@ -101,11 +106,14 @@ describe('Ieum working surface', () => {
     render(<BearingApp />);
 
     const status = screen.getByRole('status');
-    expect(screen.getByLabelText('Include unavailable seats')).not.toBeChecked();
+    const includeUnavailable = screen.getByLabelText('Include unavailable seats');
+    expect(includeUnavailable).toHaveClass('availability-filter-input');
+    expect(includeUnavailable).not.toBeChecked();
+    expect(screen.getAllByRole('checkbox', { name: /Compare Seat/i })[0]).toHaveClass('comparison-toggle-input');
     fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
     expect(status).toHaveTextContent('47 seats matched.');
 
-    fireEvent.click(screen.getByLabelText('Include unavailable seats'));
+    fireEvent.click(includeUnavailable);
     fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
     expect(status).toHaveTextContent('60 seats matched.');
 
@@ -118,25 +126,46 @@ describe('Ieum working surface', () => {
     expect(status).toHaveTextContent('60 seats matched.');
   });
 
-  it('keeps unrelated actions usable for invalid drafts and blocks only dependent output', () => {
+  it('keeps details synchronized and unrelated actions usable when a draft is invalid', () => {
     render(<BearingApp />);
     document.querySelector('details')!.open = true;
 
+    fireEvent.change(screen.getByLabelText('Units'), { target: { value: 'steps' } });
     fireEvent.change(screen.getByLabelText(/^Step length/), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('gridcell', { name: /Seat 7B/i }));
+    expect(screen.getByRole('heading', { name: 'Seat 12A' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Enter a step length greater than 0.');
+
+    fireEvent.change(screen.getByLabelText('Units'), { target: { value: 'feet' } });
     fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
     expect(screen.getByRole('status')).toHaveTextContent('47 seats matched.');
-
-    fireEvent.change(screen.getByLabelText('Units'), { target: { value: 'steps' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Enter a positive step length before using steps.');
-    fireEvent.change(screen.getByLabelText('Units'), { target: { value: 'feet' } });
 
     fireEvent.change(screen.getByLabelText(/^Walking speed/), { target: { value: '0' } });
     fireEvent.click(screen.getByRole('button', { name: 'Show route' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Enter a positive walking speed before showing a route.');
+    expect(screen.getByRole('status')).toHaveTextContent('Enter a walking speed greater than 0.');
 
     fireEvent.click(screen.getByRole('button', { name: 'Find matching seats' }));
     expect(screen.getByRole('status')).toHaveTextContent('47 seats matched.');
+  });
+
+  it('keeps the last valid step length for an agent route after a later invalid human draft', async () => {
+    const registeredTools: Array<{ name: string; execute(input: Record<string, unknown>): Promise<unknown> }> = [];
+    document.modelContext = {
+      registerTool(definition) {
+        registeredTools.push(definition as unknown as { name: string; execute(input: Record<string, unknown>): Promise<unknown> });
+      },
+    };
+    render(<BearingApp />);
+    document.querySelector('details')!.open = true;
+    await waitFor(() => expect(registeredTools).toHaveLength(9));
+
+    fireEvent.change(screen.getByLabelText('Units'), { target: { value: 'steps' } });
+    fireEvent.change(screen.getByLabelText(/^Step length/), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/^Step length/), { target: { value: '0' } });
+
+    const routeTool = registeredTools.find((tool) => tool.name === 'a11y.get_route')!;
+    const result = await routeTool.execute({ from: 'entrance_front', to: '6-12A' }) as { data: { rendered: { unitsNote?: string } } };
+    expect(result.data.rendered.unitsNote).toContain('assumed 1 m stride');
   });
 
   it('lets the browser activate a focused seat once with Enter', async () => {

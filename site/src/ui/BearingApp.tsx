@@ -166,7 +166,7 @@ export function BearingApp() {
 
   const runQuery = () => {
     if (hasInvalidStepDraft) {
-      setAnnouncement('Enter a positive step length before using steps.');
+      setAnnouncement('Enter a step length greater than 0.');
       return;
     }
     try {
@@ -196,12 +196,12 @@ export function BearingApp() {
   };
 
   const inspect = (ref: string) => {
-    setActiveRef(ref);
-    setRouteTo(ref);
     if (hasInvalidStepDraft) {
-      setAnnouncement('Enter a positive step length before using steps.');
+      setAnnouncement('Enter a step length greater than 0.');
       return;
     }
+    setActiveRef(ref);
+    setRouteTo(ref);
     try {
       setDescription(app.describe({ ref, ...renderInput }));
       setAnnouncement(`${ref} details opened.`);
@@ -217,11 +217,11 @@ export function BearingApp() {
 
   const showRoute = () => {
     if (hasInvalidStepDraft) {
-      setAnnouncement('Enter a positive step length before using steps.');
+      setAnnouncement('Enter a step length greater than 0.');
       return;
     }
     if (validWalkSpeedPercent === undefined) {
-      setAnnouncement('Enter a positive walking speed before showing a route.');
+      setAnnouncement('Enter a walking speed greater than 0.');
       return;
     }
     try {
@@ -237,7 +237,7 @@ export function BearingApp() {
   const compareCandidates = () => {
     const refs = [...comparisonRefs];
     if (refs.length < 2) {
-      setAnnouncement('Choose two to four candidates to compare.');
+      setAnnouncement('Choose two to four seats to compare.');
       return;
     }
     try {
@@ -248,7 +248,7 @@ export function BearingApp() {
 
   const toggleComparison = (ref: string, checked: boolean) => {
     if (checked && comparisonRefs.size >= 4) {
-      setAnnouncement('Choose up to four candidates to compare.');
+      setAnnouncement('Choose up to four seats to compare.');
       return;
     }
     const next = new Set(comparisonRefs);
@@ -329,7 +329,7 @@ export function BearingApp() {
             <label>Facing<select value={facing} onChange={(event) => setFacing(event.target.value)}><option value="any">Any direction</option><option value="forward">Forward</option><option value="backward">Backward</option></select></label>
             <label>Position<select value={side} onChange={(event) => setSide(event.target.value)}><option value="any">Window or aisle</option><option value="window">Window</option><option value="aisle">Aisle</option></select></label>
             <label>Quiet car<select value={quietCar} onChange={(event) => setQuietCar(event.target.value as QuietCarFilter)}><option value="any">Any</option><option value="quiet">Quiet</option><option value="non-quiet">Non-quiet</option></select></label>
-            <label><input type="checkbox" checked={includeUnavailable} onChange={(event) => setIncludeUnavailable(event.target.checked)} />Include unavailable seats</label>
+            <label className="availability-filter"><input className="availability-filter-input" type="checkbox" checked={includeUnavailable} onChange={(event) => setIncludeUnavailable(event.target.checked)} />Include unavailable seats</label>
             <label>Near<select value={near} onChange={(event) => setNear(event.target.value)}><option value="">Anywhere in the car</option>{contextChoices.map((item) => <option value={item.ref} key={item.ref}>{item.label}</option>)}</select></label>
             <label>Maximum walking distance<input inputMode="decimal" min="0" disabled={!near} value={maximumDistance} onChange={(event) => setMaximumDistance(event.target.value)} placeholder="meters" /></label>
             <label>Maximum price<input inputMode="decimal" min="0" value={maximumPrice} onChange={(event) => setMaximumPrice(event.target.value)} placeholder="USD" /></label>
@@ -339,7 +339,7 @@ export function BearingApp() {
             <button className="primary-action" type="button" onClick={runQuery}><Search aria-hidden="true" size={18} />Find matching seats</button>
             <p className="result-count"><strong>{results.length}</strong> candidates shown</p>
             <ol className="candidate-list">
-              {results.map((candidate) => <li key={candidate.ref}><button type="button" onClick={() => inspect(candidate.ref)} aria-current={candidate.ref === activeRef ? 'true' : undefined}><span>{candidate.label}</span><small>${candidate.price_usd} · {candidate.rail.side}</small></button><label><input type="checkbox" checked={comparisonRefs.has(candidate.ref)} onChange={(event) => toggleComparison(candidate.ref, event.target.checked)} />Compare {candidate.label}</label></li>)}
+              {results.map((candidate) => <li key={candidate.ref}><button type="button" onClick={() => inspect(candidate.ref)} aria-current={candidate.ref === activeRef ? 'true' : undefined}><span>{candidate.label}</span><small>${candidate.price_usd} · {candidate.rail.side}</small></button><label className="comparison-toggle"><input className="comparison-toggle-input" type="checkbox" checked={comparisonRefs.has(candidate.ref)} onChange={(event) => toggleComparison(candidate.ref, event.target.checked)} />Compare {candidate.label}</label></li>)}
             </ol>
           </aside>
 
