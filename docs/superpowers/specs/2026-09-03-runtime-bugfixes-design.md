@@ -142,3 +142,27 @@ The implementation will be committed on a dedicated bugfix branch and opened
 as a pull request targeting `dev`. The PR will describe the reproduced defects,
 the regression coverage, verification commands, and any intentionally deferred
 operational risks.
+
+## Verification outcome
+
+Implemented on `fix/runtime-webmcp-bugs` and verified with Node 24.20.0:
+
+- 101 site Vitest tests and 94 root reference tests passed;
+- typecheck, lint, DESIGN lint (zero errors/warnings), production build, and
+  diff check passed;
+- nine production Playwright tests passed, including fresh-load route geometry
+  at 760, 759, 390, and 320 CSS pixels and same-page live reprojection through
+  the same widths; and
+- Chrome 152 exposed the same nine unique WebMCP tools before and after reload,
+  with `a11y.get_layout {}` completing with `ok: true` before reload.
+
+The Chrome DevTools MCP connector lost its page target after the post-reload
+tool listing, so the second invocation and console retrieval ended with the
+connector-level `No page found` error. The post-reload listing itself contained
+all nine unique tools and no duplicate-registration or registration-failed
+result. The production mock E2E independently covers nine-tool registration and
+invocation.
+
+The intentionally deferred risks remain unchanged: this branch does not merge
+`main` into `dev`, and all nine tools retain `readOnlyHint: false` because each
+invocation changes shared visible or log state.
