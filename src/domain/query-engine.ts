@@ -109,7 +109,10 @@ function buildCandidate(
     available: seat.available,
     features: seat.features,
     domain: "rail",
-    rail: { row: seat.row, seatLetter: seat.seatLetter, side: seat.side, facing: seat.facing },
+    rail: {
+      row: seat.row, seatLetter: seat.seatLetter, side: seat.side, facing: seat.facing,
+      quietCar: seat.features.includes("quiet_zone"),
+    },
     accessibility: {
       wheelchairSpace: seat.wheelchairSpace,
       transferSeat: seat.transferSeat,

@@ -270,6 +270,12 @@ export type RailFacts = {
   seatLetter: string;
   side: "window" | "aisle";
   facing: "forward" | "backward";
+  /**
+   * Also derivable from `features`, but the contract makes it a first-class rail
+   * fact because `QueryCriteria.rail.quietCar` filters on it: an agent that can
+   * filter by something must be able to read it back without parsing a string list.
+   */
+  quietCar: boolean;
 };
 
 export type RailAccessibility = {

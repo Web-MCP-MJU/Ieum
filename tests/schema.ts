@@ -5,7 +5,7 @@
  * "#/$defs/..." pointers only), $defs, type (incl. array-valued type),
  * const, enum, required, properties, additionalProperties (false | schema),
  * items, minItems, maxItems, uniqueItems, minimum, maximum, exclusiveMaximum,
- * minLength, maxLength, allOf, oneOf, if/then, and boolean schemas (true /
+ * minLength, maxLength, allOf, anyOf, oneOf, if/then, and boolean schemas (true /
  * false as a schema value). Any other keyword (patternProperties, format,
  * $anchor, ...) is silently ignored — do not assume full JSON Schema coverage.
  */
@@ -147,6 +147,21 @@ function validateNode(schema: JsonSchema, value: unknown, path: string, root: un
 
   if (Array.isArray(s["allOf"])) {
     for (const sub of s["allOf"] as JsonSchema[]) validateNode(sub, value, path, root, errors);
+  }
+
+  if (Array.isArray(s["anyOf"])) {
+    const branches = s["anyOf"] as JsonSchema[];
+    const results = branches.map((b, i) => {
+      const branchErrors: SchemaError[] = [];
+      validateNode(b, value, path, root, branchErrors);
+      return { i, branchErrors };
+    });
+    if (!results.some((r) => r.branchErrors.length === 0)) {
+      const detail = results
+        .map((r) => `branch ${r.i}: ${r.branchErrors.map((e) => `${e.path} ${e.message}`).join("; ")}`)
+        .join(" | ");
+      errors.push({ path, message: `matched none of ${branches.length} anyOf branches — ${detail}` });
+    }
   }
 
   if (Array.isArray(s["oneOf"])) {
