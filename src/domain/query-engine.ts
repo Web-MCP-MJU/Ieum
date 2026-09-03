@@ -1,36 +1,33 @@
 import type {
-  Candidate, DomainError, Layout, QueryCriteria, RenderOptions, Seat, SpatialRef,
+  AppliedCriteria, Candidate, Distance, DomainError, Layout, QueryCriteria, QueryData,
+  RailCandidate, RenderOptions, Seat, SpatialRef,
 } from "./types.ts";
-import { route } from "./route-engine.ts";
-import { DEFAULTS, formatDistance } from "./render.ts";
+import { routeLength } from "./route-engine.ts";
+import { DEFAULTS, STEPS_NOTE, formatDistance } from "./render.ts";
 
 /**
  * Query engine.
  *
- * Two decisions here come straight from the research rather than from taste.
+ * Results are capped at MAX_RESULTS (12) items, never silently truncated: the
+ * response always carries the true pre-cap `totalMatched` and, when the cap is
+ * hit, exactly one deterministic narrowing hint (Architecture 6.1). Auditory-menu
+ * research (Commarford et al., Human Factors 50(1), 2008) found broad-and-shallow
+ * menus beat deep-and-narrow ones, which is why the cap is 12 flat items rather
+ * than three plus a "see more" prompt.
  *
- * 1. Results are returned FLAT and LONG, not truncated to three with a "there
- *    are more" signal. Auditory-menu research (Commarford et al., Human Factors
- *    50(1), 2008) found broad shallow structures beat deep narrow ones, and the
- *    effect grew for listeners with less working memory. Trained blind listeners
- *    decode speech far faster than a sighted designer assumes, so the expensive
- *    resource is the re-query round trip, not the seconds spent listening.
+ * A criterion this domain cannot honour is REJECTED, never silently dropped.
+ * Returning results while quietly ignoring "window seat" would have the agent
+ * tell the user those seats are window seats. That is the failure mode the
+ * ASSETS '25 study calls sycophantic confidence, and it destroys the one thing
+ * the product exists to protect: the user's ability to judge for themselves.
  *
- * 2. A criterion this domain cannot honour is REJECTED, never silently dropped.
- *    Returning results while quietly ignoring "window seat" would have the agent
- *    tell the user those seats are window seats. That is the failure mode the
- *    ASSETS '25 study calls sycophantic confidence, and it destroys the one thing
- *    the product exists to protect: the user's ability to judge for themselves.
+ * This engine builds only rail candidates. A hotel `Layout` is a documentation
+ * proof (Architecture 18.2), not something this codebase has a fixture for.
  */
 
 export const MAX_RESULTS = 12;
 
-export type QueryOutcome = {
-  items: Candidate[];
-  appliedCriteria: QueryCriteria;
-  totalMatched: number;
-  hint?: string;
-};
+export type QueryOutcome = QueryData & { hint?: string };
 
 const err = (code: DomainError["code"], message: string): DomainError => ({ code, message });
 
@@ -42,8 +39,9 @@ function validate(layout: Layout, c: QueryCriteria): DomainError | null {
       "for example the front door or the restroom.");
   }
   if (c.near !== undefined && !layout.landmarks.some((l) => l.key === c.near)) {
+    // Fixed template: never echo the caller's string back into the message.
     const known = layout.landmarks.map((l) => l.key).join(", ");
-    return err("INVALID_REF", `There is no landmark called "${c.near}". This car has: ${known}.`);
+    return err("INVALID_REF", `That is not a landmark in this car. Known landmarks: ${known}.`);
   }
   // Q2/Q3: the other domain's block is a real request we cannot honour.
   if (layout.domain === "rail" && c.hotel) {
@@ -73,46 +71,120 @@ function matchesRail(seat: Seat, rail: NonNullable<QueryCriteria["rail"]>): bool
   return true;
 }
 
-/** Walking distance, not straight-line: it is what the traveller actually pays. */
-function walkingDistance(layout: Layout, from: SpatialRef, to: SpatialRef): number | null {
-  const r = route(layout, from, to);
-  return "code" in r ? null : r.totalLength_m;
+/** A wheelchair space has no seat installed (49 CFR 38.125(d)(2)), so it is never called one. */
+function candidateLabel(seat: Seat): string {
+  return seat.wheelchairSpace ? `Wheelchair space ${seat.ref}` : `Seat ${seat.ref}`;
 }
 
-function describeSeat(
-  seat: Seat, distance_m: number | null, nearLabel: string | null, opts: RenderOptions,
+function candidateLine(
+  seat: Seat, label: string, distance: Distance | undefined, nearLabel: string | null,
 ): string {
-  const units = opts.units ?? DEFAULTS.units;
-  const step = opts.stepLength_m ?? DEFAULTS.stepLength_m;
-
-  const parts = [
-    seat.wheelchairSpace ? "wheelchair space" : `${seat.side}`,
-    seat.facing === "forward" ? "faces front" : "faces rear",
-  ];
-  if (distance_m !== null && nearLabel) {
-    parts.push(`${formatDistance(distance_m, units, step)} from ${nearLabel}`);
-  }
+  const parts: string[] = [];
+  if (!seat.wheelchairSpace) parts.push(seat.side);
+  parts.push(seat.facing === "forward" ? "faces front" : "faces rear");
+  if (distance && nearLabel) parts.push(`${distance.rendered} from ${nearLabel}`);
   if (seat.movableArmrest) parts.push("movable armrest");
   if (seat.bulkhead) parts.push("extra legroom");
   parts.push(`$${seat.price_usd}`);
-
-  return `${seat.ref} — ${parts.join(", ")}`;
+  return `${label} — ${parts.join(", ")}`;
 }
 
-/** Named so the agent can offer a next move instead of ending the exchange. */
-function suggestHint(layout: Layout, c: QueryCriteria, matched: number): string | undefined {
-  if (matched === 0) return undefined;
-  if (matched > MAX_RESULTS && !c.near) {
-    return "You can narrow this by distance from the front door or the restroom.";
+function buildCandidate(
+  seat: Seat, near: SpatialRef | undefined, distance_m: number | null,
+  nearLabel: string | null, opts: RenderOptions,
+): RailCandidate {
+  let distance: Distance | undefined;
+  if (near !== undefined && distance_m !== null) {
+    const units = opts.units ?? DEFAULTS.units;
+    const step = opts.stepLength_m ?? DEFAULTS.stepLength_m;
+    distance = { from: near, distance_m, rendered: formatDistance(distance_m, units, step) };
   }
-  if (matched > MAX_RESULTS && !c.rail?.side) {
-    return "You can narrow this to window or aisle seats.";
-  }
-  if (!c.needs?.minFootSpace_in2) {
-    return "If you travel with a dog guide, you can filter by floor space at the seat.";
-  }
-  return undefined;
+
+  const label = candidateLabel(seat);
+  return {
+    ref: seat.ref,
+    label,
+    line: candidateLine(seat, label, distance, nearLabel),
+    price_usd: seat.price_usd,
+    available: seat.available,
+    features: seat.features,
+    domain: "rail",
+    rail: { row: seat.row, seatLetter: seat.seatLetter, side: seat.side, facing: seat.facing },
+    accessibility: {
+      wheelchairSpace: seat.wheelchairSpace,
+      transferSeat: seat.transferSeat,
+      companionSeat: seat.companionSeat,
+      movableArmrest: seat.movableArmrest,
+      footSpace_in2: seat.footSpace_in2,
+      bulkhead: seat.bulkhead,
+      exitRow: seat.exitRow,
+    },
+    ...(distance ? { distance } : {}),
+  };
 }
+
+// ---------------------------------------------------------------------- hints
+
+/**
+ * 13+ matches: name the first applicable axis the caller has not yet set, in the
+ * order Architecture 6.1 fixes. If every applicable axis is already in use, name
+ * the first active axis that can be tightened further. Never invents a threshold.
+ */
+function narrowHint(c: AppliedCriteria): string {
+  const hasNear = c.near !== undefined;
+  const axes: { applicable: boolean; present: boolean; text: string }[] = [
+    { applicable: true, present: hasNear,
+      text: "Add a `near` landmark to narrow the results by distance." },
+    { applicable: hasNear, present: c.maxDistance_m !== undefined,
+      text: "Add a `maxDistance_m` limit to narrow the results by distance." },
+    { applicable: true, present: c.priceMax_usd !== undefined,
+      text: "Add a `priceMax_usd` limit to narrow the results by price." },
+    { applicable: true, present: c.needs?.minFootSpace_in2 !== undefined,
+      text: "Add a `needs.minFootSpace_in2` requirement to narrow the results by floor space." },
+    { applicable: true, present: c.needs?.wheelchairSpace !== undefined,
+      text: "Add a `needs.wheelchairSpace` requirement to narrow the results." },
+    { applicable: true, present: c.needs?.transferSeat !== undefined,
+      text: "Add a `needs.transferSeat` requirement to narrow the results." },
+    { applicable: true, present: c.needs?.movableArmrest !== undefined,
+      text: "Add a `needs.movableArmrest` requirement to narrow the results." },
+    { applicable: true, present: c.needs?.excludeExitRow !== undefined,
+      text: "Add a `needs.excludeExitRow` requirement to narrow the results." },
+    { applicable: true, present: c.rail?.facing !== undefined,
+      text: "Add a `rail.facing` filter to narrow the results." },
+    { applicable: true, present: c.rail?.side !== undefined,
+      text: "Add a `rail.side` filter to narrow the results." },
+    { applicable: true, present: c.rail?.quietCar !== undefined,
+      text: "Add a `rail.quietCar` filter to narrow the results." },
+  ];
+
+  const absent = axes.find((a) => a.applicable && !a.present);
+  if (absent) return absent.text;
+
+  if (c.maxDistance_m !== undefined) return "Decrease `maxDistance_m` to narrow the results further.";
+  if (c.priceMax_usd !== undefined) return "Decrease `priceMax_usd` to narrow the results further.";
+  return "Increase `needs.minFootSpace_in2` to narrow the results further.";
+}
+
+/**
+ * 0 matches: name the first ACTIVE restriction to relax, in the order Architecture
+ * 6.1 fixes. Never invents a replacement value — only the field and the direction.
+ */
+function relaxHint(c: AppliedCriteria): string {
+  if (c.availableOnly) return "Set `availableOnly` to false to include unavailable seats.";
+  if (c.maxDistance_m !== undefined) return "Increase or remove `maxDistance_m`.";
+  if (c.priceMax_usd !== undefined) return "Increase or remove `priceMax_usd`.";
+  if (c.needs?.minFootSpace_in2 !== undefined) return "Decrease or remove `needs.minFootSpace_in2`.";
+  if (c.needs?.wheelchairSpace) return "Remove the `needs.wheelchairSpace` requirement.";
+  if (c.needs?.transferSeat) return "Remove the `needs.transferSeat` requirement.";
+  if (c.needs?.movableArmrest) return "Remove the `needs.movableArmrest` requirement.";
+  if (c.needs?.excludeExitRow) return "Remove the `needs.excludeExitRow` requirement.";
+  if (c.rail?.facing !== undefined) return "Remove the `rail.facing` filter.";
+  if (c.rail?.side !== undefined) return "Remove the `rail.side` filter.";
+  if (c.rail?.quietCar) return "Remove the `rail.quietCar` filter.";
+  return "Remove the `near` filter.";
+}
+
+// ---------------------------------------------------------------------- query
 
 export function query(
   layout: Layout, criteria: QueryCriteria = {}, opts: RenderOptions = {},
@@ -121,39 +193,71 @@ export function query(
   if (invalid) return invalid;
 
   const availableOnly = criteria.availableOnly ?? true;
+  const appliedCriteria: AppliedCriteria = { ...criteria, availableOnly };
   const near = criteria.near;
   const nearLabel = near
     ? layout.landmarks.find((l) => l.key === near)?.label.replace(/\s*\(.*\)$/, "").toLowerCase() ?? near
     : null;
 
-  const scored = layout.seats
+  let scored = layout.seats
     .filter((s) => (availableOnly ? s.available : true))
     .filter((s) => (criteria.priceMax_usd === undefined ? true : s.price_usd <= criteria.priceMax_usd))
     .filter((s) => (criteria.needs ? matchesNeeds(s, criteria.needs) : true))
     .filter((s) => (criteria.rail ? matchesRail(s, criteria.rail) : true))
-    .map((s) => ({ seat: s, distance_m: near ? walkingDistance(layout, near, s.ref) : null }))
-    .filter(({ distance_m }) =>
-      criteria.maxDistance_m === undefined || (distance_m !== null && distance_m <= criteria.maxDistance_m));
+    .map((s) => ({
+      seat: s,
+      distance_m: near !== undefined ? routeLength(layout, near, s.ref) : null,
+    }));
 
-  scored.sort((a, b) =>
-    a.distance_m !== null && b.distance_m !== null
-      ? a.distance_m - b.distance_m
-      : a.seat.row - b.seat.row || a.seat.seatLetter.localeCompare(b.seat.seatLetter));
-
-  const items: Candidate[] = scored.slice(0, MAX_RESULTS).map(({ seat, distance_m }) => ({
-    ref: seat.ref,
-    line: describeSeat(seat, distance_m, nearLabel, opts),
-  }));
-
-  if (scored.length === 0) {
-    return err("NO_MATCH", "No seats match all of those conditions.");
+  // A candidate near a landmark must carry a real distance; one with no modelled
+  // path cannot honestly claim to be included in a distance-anchored result.
+  if (near !== undefined) scored = scored.filter((x) => x.distance_m !== null);
+  if (criteria.maxDistance_m !== undefined) {
+    const max = criteria.maxDistance_m;
+    scored = scored.filter((x) => x.distance_m !== null && x.distance_m <= max);
   }
 
-  const hint = suggestHint(layout, criteria, scored.length);
+  const totalMatched = scored.length;
+
+  // Sort keys, in exact order (Architecture 6.1). The final ref tie-break makes
+  // this fully deterministic — nothing is left to array or insertion order.
+  scored.sort((a, b) => {
+    if (near !== undefined) {
+      const d = (a.distance_m as number) - (b.distance_m as number);
+      if (d !== 0) return d;
+    }
+    if (availableOnly === false) {
+      const d = Number(b.seat.available) - Number(a.seat.available);
+      if (d !== 0) return d;
+    }
+    const price = a.seat.price_usd - b.seat.price_usd;
+    if (price !== 0) return price;
+    const row = a.seat.row - b.seat.row;
+    if (row !== 0) return row;
+    const letter = a.seat.seatLetter.localeCompare(b.seat.seatLetter);
+    if (letter !== 0) return letter;
+    return a.seat.ref.localeCompare(b.seat.ref);
+  });
+
+  const items: Candidate[] = scored
+    .slice(0, MAX_RESULTS)
+    .map(({ seat, distance_m }) => buildCandidate(seat, near, distance_m, nearLabel, opts));
+
+  const units = opts.units ?? DEFAULTS.units;
+  const unitsNote = units === "steps" && items.some((i) => i.distance?.rendered) ? STEPS_NOTE : undefined;
+
+  // Zero matches is success, not NO_MATCH: it still carries normalized criteria
+  // and one deterministic relaxation hint (Architecture 6.1). Hints are otherwise
+  // forbidden for 1-12 matches, so a listener never hears the same nag every time.
+  let hint: string | undefined;
+  if (totalMatched === 0) hint = relaxHint(appliedCriteria);
+  else if (totalMatched > MAX_RESULTS) hint = narrowHint(appliedCriteria);
+
   return {
     items,
-    appliedCriteria: criteria,
-    totalMatched: scored.length,
+    appliedCriteria,
+    totalMatched,
+    ...(unitsNote ? { unitsNote } : {}),
     ...(hint ? { hint } : {}),
   };
 }
