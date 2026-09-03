@@ -20,7 +20,18 @@
 - [x] 고정 toolchain, 빌드/배포 산출물, 보안 헤더, 증거 manifest 및 자산 검증을 명시한다.
 - [x] `quietCar` breaking contract의 Architecture/schema 버전을 v0.3.3으로 올린다.
 - [x] 공식 DESIGN.md 린트·JSON Schema·문서 구조·독립 재검토를 통과한다.
-- [ ] 승인된 설계에서 상세 구현 계획을 작성한다.
+- [x] 승인된 설계에서 상세 구현 계획을 작성한다.
+
+## Bearing 웹사이트 구현
+
+- [ ] Task 1: pinned Sites scaffold와 검증 harness를 구성한다.
+- [ ] Task 2: canonical rail fixture와 교차 필드 validator를 구현한다.
+- [ ] Task 3: query/describe/compare/render 순수 도메인을 구현한다.
+- [ ] Task 4: route/continuation 엔진을 구현한다.
+- [ ] Task 5: Application state, undo, confirmation lifecycle을 구현한다.
+- [ ] Task 6: atomic WebMCP 9-tool adapter를 구현한다.
+- [ ] Task 7: 전체 접근 가능 working surface를 구현한다.
+- [ ] Task 8: E2E, 자산, 빌드, runtime/deployment evidence를 완성한다.
 
 ### 설계 교정 Review
 
