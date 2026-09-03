@@ -45,13 +45,13 @@
 - Create: `site/tests/data/fixture.test.ts`
 
 **Interfaces:**
-- Produces `RailFixture`, `Seat`, `Landmark`, `RoutableRef`, and `loadRailFixture(raw): RailFixture`.
+- Produces `RailFixture`, `LoadedRailFixture`, `Seat`, `Landmark`, and `loadRailFixture(raw): LoadedRailFixture`.
 - Produces immutable `railFixture` with 60 seats, 47 available, car-level `quietCar`, shared unique refs, directed edges, and valid continuation checkpoints.
 
-- [ ] Write failing tests for schema rejection, shared-ref duplicates, out-of-bounds coordinates, bad endpoints, wrong 60/47 counts, unreachable refs, and continuation non-progress.
-- [ ] Write a failing valid-fixture test asserting exact counts, mandatory refs, stable sort order, and car-level `quietCar` copied into canonical seats.
-- [ ] Implement Zod shape validation plus explicit graph/cross-field validation, then author the independently created fixture to satisfy it.
-- [ ] Run focused fixture tests and the full suite; commit the fixture boundary.
+- [x] Write failing tests for schema rejection, shared-ref duplicates, out-of-bounds coordinates, bad endpoints, wrong 60/47 counts, unreachable refs, and continuation non-progress.
+- [x] Write a failing valid-fixture test asserting exact counts, mandatory refs, stable sort order, and car-level `quietCar` copied into canonical seats.
+- [x] Implement Zod shape validation plus explicit graph/cross-field validation, then author the independently created fixture to satisfy it.
+- [x] Run focused fixture tests and the full suite; commit the fixture boundary.
 
 ### Task 3: Implement pure query, description, comparison, and rendering
 

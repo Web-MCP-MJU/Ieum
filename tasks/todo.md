@@ -25,13 +25,20 @@
 ## Bearing 웹사이트 구현
 
 - [x] Task 1: pinned Sites scaffold와 검증 harness를 구성한다.
-- [ ] Task 2: canonical rail fixture와 교차 필드 validator를 구현한다.
+- [x] Task 2: canonical rail fixture와 교차 필드 validator를 구현한다.
 - [ ] Task 3: query/describe/compare/render 순수 도메인을 구현한다.
 - [ ] Task 4: route/continuation 엔진을 구현한다.
 - [ ] Task 5: Application state, undo, confirmation lifecycle을 구현한다.
 - [ ] Task 6: atomic WebMCP 9-tool adapter를 구현한다.
 - [ ] Task 7: 전체 접근 가능 working surface를 구현한다.
 - [ ] Task 8: E2E, 자산, 빌드, runtime/deployment evidence를 완성한다.
+
+### 구현 Review
+
+- Task 1: Node 24 기반 Vinext/shadcn Site와 Vitest·TypeScript·Oxlint·build 검증 harness를 구성했다.
+- Task 2: 60석/47 available synthetic rail fixture, strict Zod boundary, shared-ref·bounds·edge·reachability·continuation 검증, canonical seat ordering과 immutable shipped export를 구현했다.
+- Task 2 교차 검토: `6-12A → 6-12B` 직접 이동 edge, 60석/필수 ref 회귀 검사, 성공형 exhaustive continuation, bearing/coordinate 일치 검사, adjacency/cache 기반 bootstrap 탐색을 보강했다.
+- 현재 검증: unit/integration 13개, typecheck, lint가 모두 통과한다.
 
 ### 설계 교정 Review
 
