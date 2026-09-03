@@ -1,261 +1,360 @@
 import type {
-  Candidate, Comparison, DomainError, Description, Layout, LayoutSummary,
-  QueryCriteria, RenderOptions, Route, SpatialRef,
+  Comparison, Description, DomainError, Layout, LayoutSummary, QueryCriteria,
+  QueryData, ReadFailure, ReadResult, QueryResult, RenderOptions, Route,
+  SelectionState, SpatialRef, StateResult, StateSuccess, ToolErrorCode,
 } from "../domain/types.ts";
 import { route } from "../domain/route-engine.ts";
-import { query } from "../domain/query-engine.ts";
-import { compare } from "../domain/compare-engine.ts";
+import { query as queryEngine } from "../domain/query-engine.ts";
+import { compare as compareEngine } from "../domain/compare-engine.ts";
 import { car6 } from "../domain/car-6.ts";
-import { store } from "./store.ts";
+import { STEPS_NOTE } from "../domain/render.ts";
+import type { AppState, Store, UndoSnapshot } from "./store.ts";
+import { selectionState, store as defaultStore } from "./store.ts";
 
-export type ToolErrorCode =
-  | "INVALID_REF"
-  | "NO_ROUTE"
-  | "NO_MATCH"
-  | "NOT_AVAILABLE"
-  | "INVALID_SELECTION"
-  | "INVALID_CRITERIA"
-  | "UNSUPPORTED_CRITERIA"
-  | "NOTHING_TO_UNDO"
-  | "CONFIRMATION_REQUIRED";
+/**
+ * One use case per public tool. The human UI calls these same functions, so a
+ * button and a tool call cannot drift apart.
+ *
+ * Every message here is a fixed template. Architecture 19: expected errors never
+ * concatenate a raw argument into prose, because that text is read aloud and
+ * rendered, and the caller is not necessarily the user.
+ */
 
-export type ToolResult<T> = {
-  ok: boolean;
-  data?: T;
-  hint?: string;
-  error?: { code: ToolErrorCode; message: string };
-};
+export const CONFIRM_TIMEOUT_MS = 120_000;
 
-const ok = <T,>(data: T, hint?: string): ToolResult<T> => ({ ok: true, data, ...(hint && { hint }) });
-const err = (code: ToolErrorCode, message: string): ToolResult<never> => ({
-  ok: false,
-  error: { code, message },
+const RENDER_KEYS = ["units", "stepLength_m", "directionStyle", "walkSpeedPercent"] as const;
+
+/** Tool inputs are flat: `{ from, to, units }`, not `{ from, to, opts: { units } }`. */
+function splitOptions<T extends Record<string, unknown>>(
+  input: T, prefs: RenderOptions,
+): { opts: RenderOptions; rest: Record<string, unknown> } {
+  const opts: Record<string, unknown> = { ...prefs };
+  const rest: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if ((RENDER_KEYS as readonly string[]).includes(k)) {
+      if (v !== undefined) opts[k] = v;
+    } else {
+      rest[k] = v;
+    }
+  }
+  return { opts: opts as RenderOptions, rest };
+}
+
+const isError = (v: unknown): v is DomainError =>
+  typeof v === "object" && v !== null && "code" in v;
+
+const fail = (code: ToolErrorCode, message: string, hint?: string): ReadFailure => ({
+  ok: false, error: { code, message }, ...(hint ? { hint } : {}),
 });
 
-const getLayout = (opts?: RenderOptions): ToolResult<LayoutSummary> => {
-  const layout = car6;
-  store.addLog("a11y.get_layout", opts);
+export function createUsecases(
+  store: Store, layout: Layout = car6, confirmTimeoutMs = CONFIRM_TIMEOUT_MS,
+) {
+  const state = (): AppState => store.getState();
+  const projection = (): SelectionState => selectionState(state(), layout);
 
-  const data: LayoutSummary = {
-    domain: layout.domain,
-    layoutId: layout.layoutId,
-    bounds_m: layout.bounds_m,
-    seatCount: {
-      total: layout.seats.length,
-      available: layout.seats.filter((s) => s.available).length,
-    },
-    accessibleCount: {
-      wheelchairSpaces: layout.seats.filter((s) => s.wheelchairSpace).length,
-      transferSeats: layout.seats.filter((s) => s.transferSeat).length,
-      movableArmrestSeats: layout.seats.filter((s) => s.movableArmrest).length,
-    },
-    landmarks: layout.landmarks,
-    referencePoints: layout.landmarks.map((l) => l.key),
-    summary: `${layout.seats.length} seats: ${layout.seats.filter((s) => s.available).length} available`,
+  const stateFail = (code: ToolErrorCode, message: string): StateResult<never> => ({
+    ok: false, state: projection(), error: { code, message },
+  });
+
+  const seatOf = (ref: SpatialRef) => layout.seats.find((s) => s.ref === ref);
+  const landmarkOf = (ref: SpatialRef) => layout.landmarks.find((l) => l.key === ref);
+
+  /** A wheelchair space has no seat installed, so it is never called a seat. */
+  const nameOf = (ref: SpatialRef): string => {
+    const seat = seatOf(ref);
+    if (seat) return seat.wheelchairSpace ? `Wheelchair space ${ref}` : `Seat ${ref}`;
+    return landmarkOf(ref)?.label ?? ref;
   };
 
-  return ok(data);
-};
+  // ------------------------------------------------------------------- reads
 
-export type QueryOutput = {
-  items: Candidate[];
-  appliedCriteria: QueryCriteria;
-  totalMatched: number;
-  hint?: string;
-};
+  const getLayout = (input: RenderOptions = {}): ReadResult<LayoutSummary> => {
+    const available = layout.seats.filter((s) => s.available).length;
+    store.log({ name: "a11y.get_layout", args: { ...input }, resultRefs: layout.landmarks.map((l) => l.key) });
+    store.highlight(layout.landmarks.map((l) => l.key));
 
-const querySeats = (criteria: QueryCriteria, opts?: RenderOptions): ToolResult<QueryOutput> => {
-  const layout = car6;
-  store.addLog("a11y.query", criteria);
+    return {
+      ok: true,
+      data: {
+        domain: layout.domain,
+        layoutId: layout.layoutId,
+        bounds_m: layout.bounds_m,
+        seatCount: { total: layout.seats.length, available },
+        accessibleCount: {
+          wheelchairSpaces: layout.seats.filter((s) => s.wheelchairSpace).length,
+          transferSeats: layout.seats.filter((s) => s.transferSeat).length,
+          movableArmrestSeats: layout.seats.filter((s) => s.movableArmrest).length,
+        },
+        landmarks: layout.landmarks,
+        referencePoints: layout.landmarks.map((l) => l.key),
+        summary:
+          `${layout.layoutId}: ${layout.seats.length} seats, ${available} available, ` +
+          `${layout.landmarks.length} reference points.`,
+      },
+    };
+  };
 
-  const result = query(layout, criteria, opts);
-  if ("code" in result) {
-    return err(result.code, result.message);
-  }
+  const query = (input: QueryCriteria & RenderOptions = {}): QueryResult<QueryData> => {
+    const { opts, rest } = splitOptions(input, state().prefs);
+    const criteria = rest as QueryCriteria;
 
-  store.highlight(result.items.map((item) => item.ref));
-  return ok(result, result.hint);
-};
+    const result = queryEngine(layout, criteria, opts);
+    if (isError(result)) {
+      store.log({ name: "a11y.query", args: { ...input }, resultRefs: [] });
+      return fail(result.code, result.message);
+    }
 
-export type DescriptionOutput = {
-  ref: SpatialRef;
-  line: string;
-  attributes: Record<string, unknown>;
-  relations: {
-    to: SpatialRef;
-    distance_m: number;
-    rendered: string;
-    landmarksPassed: SpatialRef[];
-  }[];
-  followUps: string[];
-};
+    const refs = result.items.map((i) => i.ref);
+    store.log({
+      name: "a11y.query", args: { ...input },
+      appliedCriteria: result.appliedCriteria, resultRefs: refs,
+    });
+    store.highlight(refs);
 
-const describe = (
-  input: { ref: SpatialRef },
-  opts?: RenderOptions,
-): ToolResult<DescriptionOutput> => {
-  const layout = car6;
-  store.addLog("a11y.describe", input);
+    const { hint, ...data } = result;
+    return { ok: true, data, ...(hint ? { hint } : {}) };
+  };
 
-  const seat = layout.seats.find((s) => s.ref === input.ref);
-  if (!seat) {
-    return err("INVALID_REF", `Seat "${input.ref}" not found`);
-  }
+  const describe = (input: { ref: SpatialRef } & RenderOptions): ReadResult<Description> => {
+    const { opts } = splitOptions(input, state().prefs);
+    const ref = input.ref;
+    const seat = seatOf(ref);
+    const landmark = landmarkOf(ref);
 
-  const relations = layout.landmarks.map((landmark) => {
-    const r = route(layout, input.ref, landmark.key);
-    if ("code" in r) {
+    store.log({ name: "a11y.describe", args: { ...input }, resultRefs: seat || landmark ? [ref] : [] });
+
+    if (!seat && !landmark) {
+      return fail("INVALID_REF", "That is not a place in this car.",
+        "Ask for the layout to see the seats and reference points it has.");
+    }
+    store.highlight([ref]);
+
+    // Architecture 5: relations are the walk to each reference point. The
+    // landmarks passed are the ones on the way, not the destination itself.
+    const relations = layout.landmarks
+      .filter((l) => l.key !== ref)
+      .map((l) => {
+        const r = route(layout, ref, l.key, opts);
+        if (isError(r)) return null;
+        return {
+          to: l.key,
+          distance_m: r.totalLength_m,
+          rendered: r.rendered.summary,
+          landmarksPassed: [...new Set(r.segments.flatMap((s) => s.landmarksPassed))],
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+
+    const steps = opts.units === "steps";
+
+    if (seat) {
+      const kind = seat.wheelchairSpace ? "wheelchair space" : `${seat.side} seat`;
       return {
-        to: landmark.key,
-        distance_m: 0,
-        rendered: "Route not available",
-        landmarksPassed: [],
+        ok: true,
+        data: {
+          ref,
+          line:
+            `${nameOf(ref)} — ${kind}, faces ${seat.facing === "forward" ? "the front" : "the rear"}, ` +
+            `$${seat.price_usd}, ${seat.available ? "available" : "already taken"}.`,
+          attributes: {
+            row: seat.row, seatLetter: seat.seatLetter, side: seat.side, facing: seat.facing,
+            price_usd: seat.price_usd,
+            // Whether it can be booked is the first thing anyone needs and was
+            // the one fact this tool used to leave out.
+            available: seat.available,
+            wheelchairSpace: seat.wheelchairSpace, transferSeat: seat.transferSeat,
+            companionSeat: seat.companionSeat, movableArmrest: seat.movableArmrest,
+            footSpace_in2: seat.footSpace_in2, bulkhead: seat.bulkhead, exitRow: seat.exitRow,
+            features: seat.features,
+          },
+          relations,
+          followUps: [
+            "How do I get there from the front door?",
+            "What is near it?",
+            "Compare it with another seat.",
+          ],
+          ...(steps ? { unitsNote: STEPS_NOTE } : {}),
+        },
       };
     }
-    return {
-      to: landmark.key,
-      distance_m: r.totalLength_m,
-      rendered: r.rendered.summary,
-      landmarksPassed: r.landmarks.map((l) => l.key),
-    };
-  });
 
-  const data: DescriptionOutput = {
-    ref: input.ref,
-    line: `Seat ${seat.ref} – ${seat.side}, ${seat.facing}, $${seat.price_usd}`,
-    attributes: {
-      row: seat.row,
-      side: seat.side,
-      facing: seat.facing,
-      price: seat.price_usd,
-      wheelchairSpace: seat.wheelchairSpace,
-      transferSeat: seat.transferSeat,
-      movableArmrest: seat.movableArmrest,
-    },
-    relations,
-    followUps: [
-      "What is the distance from the entrance?",
-      "Show me nearby seats",
-      "Compare with another seat",
-    ],
+    const m = landmark!;
+    return {
+      ok: true,
+      data: {
+        ref,
+        line: `${m.label}${m.signpostedAs ? `, signed ${m.signpostedAs}` : ""} — ${m.landmarkType} landmark.`,
+        attributes: {
+          landmarkType: m.landmarkType,
+          sensoryChannels: m.sensoryChannels,
+          detectability: m.detectability,
+          ...(m.signpostedAs ? { signpostedAs: m.signpostedAs } : {}),
+        },
+        relations,
+        followUps: [
+          "Which seats are closest to it?",
+          "How do I get there from my seat?",
+        ],
+        ...(steps ? { unitsNote: STEPS_NOTE } : {}),
+      },
+    };
   };
 
-  return ok(data);
-};
+  const getRoute = (
+    input: { from: SpatialRef; to: SpatialRef } & RenderOptions,
+  ): ReadResult<Route> => {
+    const { opts } = splitOptions(input, state().prefs);
+    const r = route(layout, input.from, input.to, opts);
 
-export type RouteOutput = Route;
+    if (isError(r)) {
+      store.log({ name: "a11y.get_route", args: { ...input }, resultRefs: [] });
+      return fail(r.code, r.message);
+    }
 
-const getRoute = (
-  input: { from: SpatialRef; to: SpatialRef },
-  opts?: RenderOptions,
-): ToolResult<RouteOutput> => {
-  const layout = car6;
-  store.addLog("a11y.get_route", input);
+    store.log({ name: "a11y.get_route", args: { ...input }, resultRefs: [r.from, r.to] });
+    store.setRoute(r);
+    store.highlight([r.from, r.to]);
+    return { ok: true, data: r };
+  };
 
-  const result = route(layout, input.from, input.to, opts);
-  if ("code" in result) {
-    return err(result.code, result.message);
-  }
+  const compare = (
+    input: { refs: SpatialRef[] } & RenderOptions,
+  ): ReadResult<Comparison> => {
+    const { opts } = splitOptions(input, state().prefs);
+    const result = compareEngine(layout, input.refs ?? [], opts);
 
-  store.setRoute(result);
-  return ok(result, result.rendered.summary);
-};
+    if (isError(result)) {
+      store.log({ name: "a11y.compare", args: { ...input }, resultRefs: [] });
+      return fail(result.code, result.message);
+    }
 
-export type ComparisonOutput = Comparison;
+    store.log({ name: "a11y.compare", args: { ...input }, resultRefs: input.refs });
+    store.highlight(input.refs);
+    return { ok: true, data: result };
+  };
 
-const compareSeats = (
-  input: { refs: SpatialRef[] },
-  opts?: RenderOptions,
-): ToolResult<ComparisonOutput> => {
-  const layout = car6;
-  store.addLog("a11y.compare", input);
+  // -------------------------------------------------------------- selection
 
-  const result = compare(layout, input.refs, opts);
-  if ("code" in result) {
-    return err(result.code, result.message);
-  }
+  const LOCKED =
+    "This booking is waiting on your confirmation, so the selection cannot change.";
 
-  return ok(result, `Comparing ${input.refs.length} seats`);
-};
+  const getSelection = (): StateSuccess<{ selected: SpatialRef[] }> | ReadFailure => {
+    const s = projection();
+    store.log({ name: "a11y.get_selection", args: {}, resultRefs: s.selected });
+    store.highlight(s.selected);
+    return { ok: true, data: { selected: s.selected }, state: s };
+  };
 
-export type SelectionOutput = { selected: SpatialRef[] };
+  const select = (input: { ref: SpatialRef }): StateResult<{ selectedRef: SpatialRef }> => {
+    const ref = input.ref;
+    store.log({ name: "a11y.select", args: { ...input }, resultRefs: [ref] });
 
-const getSelection = (): ToolResult<SelectionOutput> => {
-  store.addLog("a11y.get_selection", null);
-  const state = store.getState();
-  return ok({ selected: state.selection }, state.selection.length > 0 ? `${state.selection.length} seat(s) selected` : "No selection yet");
-};
+    if (state().confirmationStatus !== "draft") {
+      return stateFail("CONFIRMATION_REQUIRED", LOCKED);
+    }
 
-export type SelectOutput = { selectedRef: SpatialRef };
+    const seat = seatOf(ref);
+    if (!seat) return stateFail("INVALID_REF", "That is not a seat in this car.");
+    if (!seat.available) {
+      // Architecture 6.2: compare may still include it; select alone refuses.
+      return stateFail("NOT_AVAILABLE", "That seat is already taken.");
+    }
 
-const select = (input: { ref: SpatialRef }): ToolResult<SelectOutput> => {
-  const layout = car6;
-  store.addLog("a11y.select", input);
+    store.select(ref);
+    return { ok: true, data: { selectedRef: ref }, state: projection() };
+  };
 
-  const seat = layout.seats.find((s) => s.ref === input.ref);
-  if (!seat) {
-    return err("INVALID_REF", `Seat "${input.ref}" not found`);
-  }
+  const undo = (): StateResult<{ undone: SpatialRef | null }> => {
+    store.log({ name: "a11y.undo", args: {}, resultRefs: [] });
 
-  store.select(input.ref);
-  store.setConfirmationStatus("draft");
-  return ok({ selectedRef: input.ref }, `Selected ${input.ref}`);
-};
+    if (state().confirmationStatus !== "draft") {
+      return stateFail("CONFIRMATION_REQUIRED", LOCKED);
+    }
+    if (state().history.length === 0) {
+      return stateFail("NOTHING_TO_UNDO", "There is nothing to undo yet.");
+    }
 
-export type UndoOutput = { undone: boolean };
+    const { undone } = store.undo();
+    store.highlight(state().selection);
+    return { ok: true, data: { undone }, state: projection() };
+  };
 
-const undo = (): ToolResult<UndoOutput> => {
-  store.addLog("a11y.undo", null);
-  const result = store.undo();
+  /**
+   * Architecture 13: one asynchronous call that returns a terminal outcome, not a
+   * two-call polling protocol. The agent starting it never finishes it — only the
+   * human dialog, the timer, or the caller's own abort can.
+   */
+  const confirm = (
+    options: { signal?: AbortSignal } = {},
+  ): Promise<StateResult<{ outcome: "confirmed" | "cancelled" | "timeout" }>> => {
+    store.log({ name: "a11y.confirm", args: {}, resultRefs: state().selection });
 
-  if (!result.undone) {
-    return err("NOTHING_TO_UNDO", "No selection to undo");
-  }
+    if (state().confirmationStatus !== "draft") {
+      return Promise.resolve(stateFail("CONFIRMATION_REQUIRED", LOCKED));
+    }
+    if (state().selection.length === 0) {
+      return Promise.resolve(
+        stateFail("INVALID_SELECTION", "There is nothing selected to confirm."));
+    }
+    if (options.signal?.aborted) {
+      return Promise.reject(options.signal.reason ?? new Error("aborted"));
+    }
 
-  return ok({ undone: true }, "Selection cleared");
-};
+    // Private to this call: a cancelled confirmation is not a step the user took,
+    // so it must not consume or create an entry in their undo history.
+    const before: UndoSnapshot = store.snapshot();
 
-export type ConfirmOutput = { outcome: "confirmed" | "cancelled" };
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let unsubscribe = (): void => {};
+      let timer: ReturnType<typeof setTimeout> | undefined;
 
-const confirm = async (): Promise<ToolResult<ConfirmOutput>> => {
-  store.addLog("a11y.confirm", null);
-  const state = store.getState();
+      // One idempotent settle. Racing UI actions and late callbacks cannot
+      // resolve twice, reopen the dialog, or overwrite a terminal state.
+      const settle = (finish: () => void): void => {
+        if (settled) return;
+        settled = true;
+        if (timer !== undefined) clearTimeout(timer);
+        unsubscribe();
+        options.signal?.removeEventListener("abort", onAbort);
+        finish();
+      };
 
-  if (state.selection.length === 0) {
-    return err("INVALID_SELECTION", "No seat selected to confirm");
-  }
-
-  store.setConfirmationStatus("confirmation_pending");
-
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      store.setConfirmationStatus("draft");
-      resolve(err("CONFIRMATION_REQUIRED", "Confirmation timeout (120s)"));
-    }, 120_000);
-
-    const checkConfirmation = () => {
-      const currentState = store.getState();
-      if (currentState.confirmationStatus === "confirmed") {
-        clearTimeout(timeout);
-        resolve(ok({ outcome: "confirmed" }, "Booking confirmed"));
-      } else if (currentState.confirmationStatus === "cancelled") {
-        clearTimeout(timeout);
-        resolve(ok({ outcome: "cancelled" }, "Booking cancelled"));
+      function onAbort(): void {
+        // An agent giving up is not the human saying no, so this rejects rather
+        // than reporting a cancellation the user never made.
+        settle(() => {
+          store.restore(before);
+          reject(options.signal?.reason ?? new Error("aborted"));
+        });
       }
-    };
 
-    store.subscribe(() => checkConfirmation());
-  });
-};
+      const terminal = (outcome: "confirmed" | "cancelled" | "timeout"): void => {
+        settle(() => {
+          if (outcome !== "confirmed") store.restore(before);
+          resolve({ ok: true, data: { outcome }, state: projection() });
+        });
+      };
 
-export const usecases = {
-  getLayout,
-  query: querySeats,
-  describe,
-  getRoute,
-  compare: compareSeats,
-  getSelection,
-  select,
-  undo,
-  confirm,
-};
+      store.setConfirmationStatus("confirmation_pending");
+      options.signal?.addEventListener("abort", onAbort, { once: true });
+
+      unsubscribe = store.subscribe((s) => {
+        if (s.confirmationStatus === "confirmed") terminal("confirmed");
+        else if (s.confirmationStatus === "draft") terminal("cancelled");
+      });
+
+      timer = setTimeout(() => terminal("timeout"), confirmTimeoutMs);
+      // Node keeps the process alive for a pending timer; a browser does not care.
+      (timer as unknown as { unref?: () => void }).unref?.();
+    });
+  };
+
+  return { getLayout, query, describe, getRoute, compare, getSelection, select, undo, confirm };
+}
+
+export type Usecases = ReturnType<typeof createUsecases>;
+
+/** The instance the WebMCP adapter and the human UI share. */
+export const usecases: Usecases = createUsecases(defaultStore, car6);
