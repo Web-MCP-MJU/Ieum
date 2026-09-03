@@ -324,3 +324,19 @@ test("routeLength agrees with the full route it skips building", () => {
   assert.equal(routeLength(car6, "6-12A", "6-12A"), 0, "the same place costs nothing");
   assert.equal(routeLength(car6, "99Z", "6-12A"), null, "an unknown ref has no distance");
 });
+
+test("a walk is never described from a heading the traveller has just left", () => {
+  // Row 1 faces the front, so reaching the rear means turning around first.
+  // Saying "walk behind you" after "turn around" contradicts the instruction.
+  const summary = ok("6-1A", "restroom").rendered.summary;
+  assert.match(summary, /Turn around/, summary);
+  assert.ok(!/Walk[^.]*behind you/.test(summary), summary);
+
+  for (const [from, to] of [["6-1A", "restroom"], ["entrance_front", "6-12A"],
+                            ["6-15D", "entrance_front"]] as const) {
+    for (const style of ["relative", "clock", "cardinal"] as const) {
+      const s = ok(from, to, { directionStyle: style }).rendered.summary;
+      assert.ok(!/Walk[^.]*behind you/.test(s), `${from}->${to} ${style}: ${s}`);
+    }
+  }
+});

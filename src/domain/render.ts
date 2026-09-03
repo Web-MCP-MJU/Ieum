@@ -156,7 +156,13 @@ function legSentences(leg: Leg, o: Fixed, labels: AxisLabels, byKey: Map<string,
   } else if (s.pathway_mode === "vestibule") {
     out.push(`Cross the vestibule, ${dist}.`);
   } else if (leg.turns) {
-    out.push(`Walk ${dist} ${dir}${passing(leg, byKey)}.`);
+    // Once a turn has been given, the traveller is facing the way they are about
+    // to walk. Repeating the direction here would either restate the turn or,
+    // worse, describe the walk from the heading they no longer have — which is
+    // how "Turn around ... walk behind you" came out.
+    out.push(turn
+      ? `Walk ${dist}${passing(leg, byKey)}.`
+      : `Walk ${dist} ${dir}${passing(leg, byKey)}.`);
   } else {
     // No turn means a sidestep: the traveller moves without changing which way
     // they face, which is how anyone actually leaves a seat.
