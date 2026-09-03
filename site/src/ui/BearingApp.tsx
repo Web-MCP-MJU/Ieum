@@ -415,7 +415,7 @@ export function BearingApp() {
 
             {comparison && <section className="panel comparison-panel" aria-label="Seat comparison"><h2>Comparison</h2><div className="comparison-scroll"><table><thead><tr><th>Seat</th>{comparison.rows.map((row) => <th key={row.ref}>{row.ref}</th>)}</tr></thead><tbody>{comparison.axes.slice(0, 5).map((axis) => <tr key={axis.key}><th>{axis.label}</th>{comparison.rows.map((row) => <td key={row.ref}>{String(row.values[axis.key])}</td>)}</tr>)}</tbody></table></div></section>}
 
-            <section className="panel tool-log" aria-label="Tool activity"><p className="eyebrow">Shared activity</p><h2>Human + Agent log</h2><ol>{state.toolLog.slice(-6).reverse().map((entry) => <li key={entry.callId}><span>{entry.name}</span><small>{entry.origin} · {entry.status}</small></li>)}</ol></section>
+            <section className="panel tool-log" aria-label="Tool activity"><p className="eyebrow">Shared activity</p><h2>Human + Agent log</h2><ol>{state.toolLog.slice(-10).reverse().map((entry) => <li key={entry.callId}><span>{entry.name}</span><small>{entry.origin} · {entry.status}</small></li>)}</ol></section>
           </aside>
         </section>
       </div>

@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -72,6 +73,48 @@ describe('Ieum working surface', () => {
 
     expect(registerTool).toHaveBeenCalledTimes(1);
     expect(signals[0].aborted).toBe(true);
+  });
+
+  it('retries WebMCP registration cleanly after StrictMode cleans up an in-flight owner', async () => {
+    let resolveFirstRegistration!: () => void;
+    const firstRegistration = new Promise<void>((resolve) => { resolveFirstRegistration = resolve; });
+    const registrations: Array<{ name: string; signal: AbortSignal }> = [];
+    document.modelContext = {
+      registerTool(definition, options) {
+        registrations.push({ name: String(definition.name), signal: options.signal });
+        return registrations.length === 1 ? firstRegistration : undefined;
+      },
+    };
+
+    render(<StrictMode><BearingApp /></StrictMode>);
+    await waitFor(() => expect(registrations.length).toBe(10));
+
+    const firstSignal = registrations[0]!.signal;
+    const currentRegistrations = registrations.filter(({ signal }) => signal !== firstSignal);
+    expect(firstSignal.aborted).toBe(true);
+    expect(currentRegistrations).toHaveLength(9);
+    expect(currentRegistrations.map(({ name }) => name)).toEqual([
+      'a11y.get_layout', 'a11y.query', 'a11y.describe', 'a11y.get_route', 'a11y.compare',
+      'a11y.select', 'a11y.get_selection', 'a11y.undo', 'a11y.confirm',
+    ]);
+
+    resolveFirstRegistration();
+    await Promise.resolve();
+    expect(registrations).toHaveLength(10);
+    expect(screen.getByText('WebMCP connected. Agent tools are available.')).toBeInTheDocument();
+  });
+
+  it('shows the newest ten completed tool calls in the human activity log', () => {
+    render(<BearingApp />);
+
+    for (const ref of ['7A', '7B', '7C', '7D', '8A', '8B', '8C', '8D', '9A', '9B']) {
+      fireEvent.click(screen.getByRole('gridcell', { name: new RegExp(`Seat ${ref}`, 'i') }));
+    }
+
+    const log = within(screen.getByLabelText('Tool activity'));
+    expect(log.getAllByRole('listitem')).toHaveLength(10);
+    expect(log.getAllByText('a11y.describe')).toHaveLength(10);
+    expect(log.queryAllByText(/pending/)).toHaveLength(0);
   });
 
   it('compares exactly two through four current-query candidates without changing the booking selection', () => {

@@ -109,7 +109,16 @@ export function createBearingApplication(fixture: LoadedRailFixture, port: Confi
       if (!hasValidPositiveNumber(prefs.stepLength_m) || !hasValidPositiveNumber(prefs.walkSpeedPercent)) {
         throw new DomainError('INVALID_CRITERIA');
       }
-      store.update((state) => ({ ...state, prefs: { ...state.prefs, ...prefs } }));
+      const { stepLength_m, walkSpeedPercent, ...otherPrefs } = prefs;
+      store.update((state) => ({
+        ...state,
+        prefs: {
+          ...state.prefs,
+          ...otherPrefs,
+          ...(stepLength_m === undefined ? {} : { stepLength_m }),
+          ...(walkSpeedPercent === undefined ? {} : { walkSpeedPercent }),
+        },
+      }));
     },
     getLayout(input: RenderInput = {}, options?: CallOptions) {
       const callId = begin('a11y.get_layout', input, options);

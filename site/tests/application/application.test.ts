@@ -114,6 +114,22 @@ describe('Bearing application', () => {
     expect(app.getState().prefs).toEqual(original);
   });
 
+  it('preserves stored numeric preferences when a partial update explicitly leaves them undefined', () => {
+    const app = createBearingApplication(railFixture, { open: async () => 'confirmed' });
+    app.setPreferences({ stepLength_m: 1.2, walkSpeedPercent: 85 });
+
+    app.setPreferences({ units: 'meters', stepLength_m: undefined, walkSpeedPercent: undefined });
+    expect(app.getState().prefs).toEqual(expect.objectContaining({
+      units: 'meters', stepLength_m: 1.2, walkSpeedPercent: 85,
+    }));
+
+    const beforeInvalidUpdate = app.getState().prefs;
+    expect(() => app.setPreferences({ directionStyle: 'clock', stepLength_m: 0 })).toThrow(
+      expect.objectContaining<Partial<DomainError>>({ code: 'INVALID_CRITERIA' }),
+    );
+    expect(app.getState().prefs).toEqual(beforeInvalidUpdate);
+  });
+
   it('keeps the confirmation wire code while explaining an empty selection', async () => {
     const app = createBearingApplication(railFixture, { open: async () => 'confirmed' });
 
