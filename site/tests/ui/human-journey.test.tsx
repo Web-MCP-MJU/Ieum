@@ -1,7 +1,14 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { BearingApp } from '@/src/ui/BearingApp';
+
+const originalModelContext = document.modelContext;
+
+afterEach(() => {
+  document.modelContext = originalModelContext;
+  vi.restoreAllMocks();
+});
 
 describe('Bearing working surface', () => {
   it('renders the 60-seat grid and completes a human select and undo flow', async () => {
@@ -45,5 +52,27 @@ describe('Bearing working surface', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it('does not update WebMCP capability after unmounting during registration', async () => {
+    let resolveRegistration!: () => void;
+    const firstRegistration = new Promise<void>((resolve) => { resolveRegistration = resolve; });
+    const signals: AbortSignal[] = [];
+    const registerTool = vi.fn<(definition: Record<string, unknown>, options: { signal: AbortSignal }) => Promise<void>>((_definition, options) => {
+      signals.push(options.signal);
+      return firstRegistration;
+    });
+    document.modelContext = { registerTool };
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const { unmount } = render(<BearingApp />);
+    await waitFor(() => expect(registerTool).toHaveBeenCalledTimes(1));
+    unmount();
+    resolveRegistration();
+    await Promise.resolve();
+
+    expect(registerTool).toHaveBeenCalledTimes(1);
+    expect(signals[0].aborted).toBe(true);
+    expect(consoleError).not.toHaveBeenCalled();
   });
 });

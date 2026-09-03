@@ -84,12 +84,22 @@ export function BearingApp() {
   );
 
   useEffect(() => {
+    const owner = new AbortController();
+    let active = true;
     let dispose = () => {};
-    void registerBearingTools(document as DocumentWithModelContext, app).then((registration) => {
+    void registerBearingTools(document as DocumentWithModelContext, app, { signal: owner.signal }).then((registration) => {
+      if (!active) {
+        registration.dispose();
+        return;
+      }
       setCapability(registration.capability);
       dispose = () => registration.dispose();
     });
-    return () => dispose();
+    return () => {
+      active = false;
+      owner.abort();
+      dispose();
+    };
   }, [app]);
 
   useEffect(() => {
