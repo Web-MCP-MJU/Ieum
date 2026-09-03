@@ -1,5 +1,18 @@
 # Web MCP 대회 프로젝트 문서 검토
 
+## dev OpenAI Sites 재배포
+
+- [x] 원격 `dev`와 로컬 `dev`의 동기화 상태를 확인한다.
+- [x] `dev`의 `site/` 테스트와 프로덕션 빌드를 통과시킨다.
+- [x] 검증된 `site/` 소스를 Sites 버전으로 저장한다.
+- [x] 기존 공개 접근 범위로 배포하고 프로덕션 응답을 확인한다.
+
+### 재배포 Review
+
+- 원격과 동기화된 `dev`의 `site/`를 Node 24에서 검증했다: Vitest 84개, lint, typecheck, Vinext production build가 통과했다.
+- Sites 버전 2를 공개 배포했으며 `https://bearing-rail-access.wlvlxlrkt.chatgpt.site`가 비로그인 `HTTP/2 200`을 반환한다.
+- 배포 응답에서 `Permissions-Policy: tools=(self)`, `Origin-Agent-Cluster`, nonce 기반 CSP, `X-Content-Type-Options: nosniff`를 확인했다.
+
 ## 배포 401 복구
 
 - [x] 공개 URL의 HTTP 응답을 재현하고 응답 주체를 식별한다.
