@@ -25,6 +25,9 @@ dist/
 build/
 out/
 coverage/
+playwright-report/
+test-results/
+blob-report/
 .cache/
 .vite/
 .next/
@@ -40,5 +43,6 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Local workflow state
+.worktrees/
 .superpowers/sdd/
 .devpost-hackathon-state.json

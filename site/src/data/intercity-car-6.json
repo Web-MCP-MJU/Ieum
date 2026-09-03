@@ -1,0 +1,2774 @@
+{
+  "schemaVersion": "bearing.rail-fixture.v1",
+  "domain": "rail",
+  "layoutId": "Car 6, Business Class",
+  "authoringSource": "independently_authored_synthetic",
+  "bounds_m": {
+    "length": 26.4,
+    "width": 3.1
+  },
+  "car": {
+    "quietCar": true
+  },
+  "seats": [
+    {
+      "ref": "6-7A",
+      "row": 7,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 2
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 72,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": true,
+      "movableArmrest": false,
+      "footSpace_in2": 336,
+      "bulkhead": true,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-7B",
+      "row": 7,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 2
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 72,
+      "available": true,
+      "wheelchairSpace": true,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 336,
+      "bulkhead": true,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-7C",
+      "row": 7,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 2
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 72,
+      "available": true,
+      "wheelchairSpace": true,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 336,
+      "bulkhead": true,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-7D",
+      "row": 7,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 2
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 72,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": true,
+      "movableArmrest": false,
+      "footSpace_in2": 336,
+      "bulkhead": true,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-8A",
+      "row": 8,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 3.5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 76,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-8B",
+      "row": 8,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 3.5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 76,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": true,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-8C",
+      "row": 8,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 3.5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 76,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": true,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-8D",
+      "row": 8,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 3.5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 76,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-9A",
+      "row": 9,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-9B",
+      "row": 9,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 80,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-9C",
+      "row": 9,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-9D",
+      "row": 9,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-10A",
+      "row": 10,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 6.5
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-10B",
+      "row": 10,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 6.5
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-10C",
+      "row": 10,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 6.5
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 64,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-10D",
+      "row": 10,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 6.5
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-11A",
+      "row": 11,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 8
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 68,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-11B",
+      "row": 11,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 8
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 68,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-11C",
+      "row": 11,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 8
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 68,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-11D",
+      "row": 11,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 8
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 68,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-12A",
+      "row": 12,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 9.5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 72,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-12B",
+      "row": 12,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 9.5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 72,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-12C",
+      "row": 12,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 9.5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 72,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-12D",
+      "row": 12,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 9.5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 72,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-13A",
+      "row": 13,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 11
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 76,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-13B",
+      "row": 13,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 11
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 76,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-13C",
+      "row": 13,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 11
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 76,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-13D",
+      "row": 13,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 11
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 76,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-14A",
+      "row": 14,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 12.5
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": true,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-14B",
+      "row": 14,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 12.5
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": true,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-14C",
+      "row": 14,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 12.5
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 80,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": true,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-14D",
+      "row": 14,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 12.5
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": true,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-15A",
+      "row": 15,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 14
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 64,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-15B",
+      "row": 15,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 14
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-15C",
+      "row": 15,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 14
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-15D",
+      "row": 15,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 14
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-16A",
+      "row": 16,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 15.5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 68,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-16B",
+      "row": 16,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 15.5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 68,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-16C",
+      "row": 16,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 15.5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 68,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-16D",
+      "row": 16,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 15.5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 68,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-17A",
+      "row": 17,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 17
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 72,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-17B",
+      "row": 17,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 17
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 72,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-17C",
+      "row": 17,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 17
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 72,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-17D",
+      "row": 17,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 17
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 72,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-18A",
+      "row": 18,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 18.5
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 76,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-18B",
+      "row": 18,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 18.5
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 76,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-18C",
+      "row": 18,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 18.5
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 76,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-18D",
+      "row": 18,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 18.5
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 76,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-19A",
+      "row": 19,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 20
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-19B",
+      "row": 19,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 20
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-19C",
+      "row": 19,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 20
+      },
+      "side": "aisle",
+      "facing": "backward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-19D",
+      "row": 19,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 20
+      },
+      "side": "window",
+      "facing": "backward",
+      "price_usd": 80,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-20A",
+      "row": 20,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 21.5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-20B",
+      "row": 20,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 21.5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-20C",
+      "row": 20,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 21.5
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-20D",
+      "row": 20,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 21.5
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 64,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "power_outlet",
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-21A",
+      "row": 21,
+      "seatLetter": "A",
+      "position_m": {
+        "x": 0.35,
+        "y": 23
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 68,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-21B",
+      "row": 21,
+      "seatLetter": "B",
+      "position_m": {
+        "x": 1.05,
+        "y": 23
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 68,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-21C",
+      "row": 21,
+      "seatLetter": "C",
+      "position_m": {
+        "x": 2.05,
+        "y": 23
+      },
+      "side": "aisle",
+      "facing": "forward",
+      "price_usd": 68,
+      "available": true,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": true,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    },
+    {
+      "ref": "6-21D",
+      "row": 21,
+      "seatLetter": "D",
+      "position_m": {
+        "x": 2.75,
+        "y": 23
+      },
+      "side": "window",
+      "facing": "forward",
+      "price_usd": 68,
+      "available": false,
+      "wheelchairSpace": false,
+      "transferSeat": false,
+      "companionSeat": false,
+      "movableArmrest": false,
+      "footSpace_in2": 288,
+      "bulkhead": false,
+      "exitRow": false,
+      "features": [
+        "reading_light"
+      ]
+    }
+  ],
+  "landmarks": [
+    {
+      "key": "luggage_rack",
+      "label": "Front luggage rack",
+      "position_m": {
+        "x": 1.55,
+        "y": 1.2
+      },
+      "landmarkType": "clue",
+      "sensoryChannels": [
+        "tactile"
+      ],
+      "detectability": {
+        "caneUser": "high",
+        "dogGuide": "medium"
+      }
+    },
+    {
+      "key": "cafe_car",
+      "label": "Café car door",
+      "position_m": {
+        "x": 1.55,
+        "y": 23.7
+      },
+      "landmarkType": "information_point",
+      "sensoryChannels": [
+        "auditory",
+        "olfactory"
+      ],
+      "detectability": {
+        "caneUser": "medium",
+        "dogGuide": "high"
+      },
+      "signpostedAs": "Café car"
+    },
+    {
+      "key": "restroom",
+      "label": "Accessible restroom",
+      "position_m": {
+        "x": 1.55,
+        "y": 24.5
+      },
+      "landmarkType": "primary",
+      "sensoryChannels": [
+        "tactile",
+        "auditory"
+      ],
+      "detectability": {
+        "caneUser": "high",
+        "dogGuide": "high"
+      },
+      "signpostedAs": "Restroom"
+    }
+  ],
+  "referencePoints": [
+    {
+      "ref": "entrance_front",
+      "label": "Front entrance",
+      "position_m": {
+        "x": 1.55,
+        "y": 0.5
+      },
+      "kind": "entrance",
+      "stableCheckpoint": true
+    },
+    {
+      "ref": "entrance_rear",
+      "label": "Rear entrance",
+      "position_m": {
+        "x": 1.55,
+        "y": 25.5
+      },
+      "kind": "entrance",
+      "stableCheckpoint": true
+    }
+  ],
+  "aisleAnchors": [
+    {
+      "ref": "row_7_aisle",
+      "label": "Row 7 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 2
+      },
+      "row": 7,
+      "stableCheckpoint": true
+    },
+    {
+      "ref": "row_8_aisle",
+      "label": "Row 8 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 3.5
+      },
+      "row": 8,
+      "stableCheckpoint": false
+    },
+    {
+      "ref": "row_9_aisle",
+      "label": "Row 9 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 5
+      },
+      "row": 9,
+      "stableCheckpoint": false
+    },
+    {
+      "ref": "row_10_aisle",
+      "label": "Row 10 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 6.5
+      },
+      "row": 10,
+      "stableCheckpoint": true
+    },
+    {
+      "ref": "row_11_aisle",
+      "label": "Row 11 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 8
+      },
+      "row": 11,
+      "stableCheckpoint": false
+    },
+    {
+      "ref": "row_12_aisle",
+      "label": "Row 12 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 9.5
+      },
+      "row": 12,
+      "stableCheckpoint": false
+    },
+    {
+      "ref": "row_13_aisle",
+      "label": "Row 13 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 11
+      },
+      "row": 13,
+      "stableCheckpoint": true
+    },
+    {
+      "ref": "row_14_aisle",
+      "label": "Row 14 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 12.5
+      },
+      "row": 14,
+      "stableCheckpoint": false
+    },
+    {
+      "ref": "row_15_aisle",
+      "label": "Row 15 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 14
+      },
+      "row": 15,
+      "stableCheckpoint": false
+    },
+    {
+      "ref": "row_16_aisle",
+      "label": "Row 16 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 15.5
+      },
+      "row": 16,
+      "stableCheckpoint": true
+    },
+    {
+      "ref": "row_17_aisle",
+      "label": "Row 17 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 17
+      },
+      "row": 17,
+      "stableCheckpoint": false
+    },
+    {
+      "ref": "row_18_aisle",
+      "label": "Row 18 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 18.5
+      },
+      "row": 18,
+      "stableCheckpoint": false
+    },
+    {
+      "ref": "row_19_aisle",
+      "label": "Row 19 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 20
+      },
+      "row": 19,
+      "stableCheckpoint": true
+    },
+    {
+      "ref": "row_20_aisle",
+      "label": "Row 20 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 21.5
+      },
+      "row": 20,
+      "stableCheckpoint": false
+    },
+    {
+      "ref": "row_21_aisle",
+      "label": "Row 21 aisle",
+      "position_m": {
+        "x": 1.55,
+        "y": 23
+      },
+      "row": 21,
+      "stableCheckpoint": true
+    }
+  ],
+  "pathEdges": [
+    {
+      "id": "edge_entrance_luggage",
+      "from": "entrance_front",
+      "to": "luggage_rack",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "vestibule",
+      "length_m": 0.7,
+      "min_width_m": 0.9,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_luggage_row_7",
+      "from": "luggage_rack",
+      "to": "row_7_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.8,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_7_8",
+      "from": "row_7_aisle",
+      "to": "row_8_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_8_9",
+      "from": "row_8_aisle",
+      "to": "row_9_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_9_10",
+      "from": "row_9_aisle",
+      "to": "row_10_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_10_11",
+      "from": "row_10_aisle",
+      "to": "row_11_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_11_12",
+      "from": "row_11_aisle",
+      "to": "row_12_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_12_13",
+      "from": "row_12_aisle",
+      "to": "row_13_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_13_14",
+      "from": "row_13_aisle",
+      "to": "row_14_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_14_15",
+      "from": "row_14_aisle",
+      "to": "row_15_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_15_16",
+      "from": "row_15_aisle",
+      "to": "row_16_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_16_17",
+      "from": "row_16_aisle",
+      "to": "row_17_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_17_18",
+      "from": "row_17_aisle",
+      "to": "row_18_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_18_19",
+      "from": "row_18_aisle",
+      "to": "row_19_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_19_20",
+      "from": "row_19_aisle",
+      "to": "row_20_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_20_21",
+      "from": "row_20_aisle",
+      "to": "row_21_aisle",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.5,
+      "min_width_m": 0.85,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_row_21_cafe",
+      "from": "row_21_aisle",
+      "to": "cafe_car",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "door",
+      "length_m": 0.7,
+      "min_width_m": 0.82,
+      "signpostedAs": "Café car",
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_cafe_restroom",
+      "from": "cafe_car",
+      "to": "restroom",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "vestibule",
+      "length_m": 0.8,
+      "min_width_m": 0.82,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_restroom_rear",
+      "from": "restroom",
+      "to": "entrance_rear",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "door",
+      "length_m": 1,
+      "min_width_m": 0.82,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 180
+      }
+    },
+    {
+      "id": "edge_6_7A",
+      "from": "row_7_aisle",
+      "to": "6-7A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_7B",
+      "from": "row_7_aisle",
+      "to": "6-7B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_7C",
+      "from": "row_7_aisle",
+      "to": "6-7C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_7D",
+      "from": "row_7_aisle",
+      "to": "6-7D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_8A",
+      "from": "row_8_aisle",
+      "to": "6-8A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_8B",
+      "from": "row_8_aisle",
+      "to": "6-8B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_8C",
+      "from": "row_8_aisle",
+      "to": "6-8C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_8D",
+      "from": "row_8_aisle",
+      "to": "6-8D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_9A",
+      "from": "row_9_aisle",
+      "to": "6-9A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_9B",
+      "from": "row_9_aisle",
+      "to": "6-9B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_9C",
+      "from": "row_9_aisle",
+      "to": "6-9C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_9D",
+      "from": "row_9_aisle",
+      "to": "6-9D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_10A",
+      "from": "row_10_aisle",
+      "to": "6-10A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_10B",
+      "from": "row_10_aisle",
+      "to": "6-10B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_10C",
+      "from": "row_10_aisle",
+      "to": "6-10C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_10D",
+      "from": "row_10_aisle",
+      "to": "6-10D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_11A",
+      "from": "row_11_aisle",
+      "to": "6-11A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_11B",
+      "from": "row_11_aisle",
+      "to": "6-11B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_11C",
+      "from": "row_11_aisle",
+      "to": "6-11C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_11D",
+      "from": "row_11_aisle",
+      "to": "6-11D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_12A",
+      "from": "row_12_aisle",
+      "to": "6-12A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_12B",
+      "from": "row_12_aisle",
+      "to": "6-12B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_12C",
+      "from": "row_12_aisle",
+      "to": "6-12C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_12D",
+      "from": "row_12_aisle",
+      "to": "6-12D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_13A",
+      "from": "row_13_aisle",
+      "to": "6-13A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_13B",
+      "from": "row_13_aisle",
+      "to": "6-13B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_13C",
+      "from": "row_13_aisle",
+      "to": "6-13C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_13D",
+      "from": "row_13_aisle",
+      "to": "6-13D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_14A",
+      "from": "row_14_aisle",
+      "to": "6-14A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_14B",
+      "from": "row_14_aisle",
+      "to": "6-14B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_14C",
+      "from": "row_14_aisle",
+      "to": "6-14C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_14D",
+      "from": "row_14_aisle",
+      "to": "6-14D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_15A",
+      "from": "row_15_aisle",
+      "to": "6-15A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_15B",
+      "from": "row_15_aisle",
+      "to": "6-15B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_15C",
+      "from": "row_15_aisle",
+      "to": "6-15C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_15D",
+      "from": "row_15_aisle",
+      "to": "6-15D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_16A",
+      "from": "row_16_aisle",
+      "to": "6-16A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_16B",
+      "from": "row_16_aisle",
+      "to": "6-16B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_16C",
+      "from": "row_16_aisle",
+      "to": "6-16C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_16D",
+      "from": "row_16_aisle",
+      "to": "6-16D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_17A",
+      "from": "row_17_aisle",
+      "to": "6-17A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_17B",
+      "from": "row_17_aisle",
+      "to": "6-17B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_17C",
+      "from": "row_17_aisle",
+      "to": "6-17C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_17D",
+      "from": "row_17_aisle",
+      "to": "6-17D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_18A",
+      "from": "row_18_aisle",
+      "to": "6-18A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_18B",
+      "from": "row_18_aisle",
+      "to": "6-18B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_18C",
+      "from": "row_18_aisle",
+      "to": "6-18C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_18D",
+      "from": "row_18_aisle",
+      "to": "6-18D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_19A",
+      "from": "row_19_aisle",
+      "to": "6-19A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_19B",
+      "from": "row_19_aisle",
+      "to": "6-19B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_19C",
+      "from": "row_19_aisle",
+      "to": "6-19C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_19D",
+      "from": "row_19_aisle",
+      "to": "6-19D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_20A",
+      "from": "row_20_aisle",
+      "to": "6-20A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_20B",
+      "from": "row_20_aisle",
+      "to": "6-20B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_20C",
+      "from": "row_20_aisle",
+      "to": "6-20C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_20D",
+      "from": "row_20_aisle",
+      "to": "6-20D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_21A",
+      "from": "row_21_aisle",
+      "to": "6-21A",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2000000000000002,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_21B",
+      "from": "row_21_aisle",
+      "to": "6-21B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.5,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 270
+      }
+    },
+    {
+      "id": "edge_6_21C",
+      "from": "row_21_aisle",
+      "to": "6-21C",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.4999999999999998,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_21D",
+      "from": "row_21_aisle",
+      "to": "6-21D",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 1.2,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    },
+    {
+      "id": "edge_6_12A_6_12B",
+      "from": "6-12A",
+      "to": "6-12B",
+      "bidirectional": true,
+      "traversable": true,
+      "pathway_mode": "walkway",
+      "length_m": 0.7,
+      "min_width_m": 0.8,
+      "bearing": {
+        "frame": "car_axis",
+        "degrees": 90
+      }
+    }
+  ]
+}
