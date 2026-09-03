@@ -1,256 +1,241 @@
 /**
- * WebMCP tool registration.
- * 9개 use case를 a11y.* 툴로 등록합니다.
- * inputSchema는 JSON Schema draft 2020-12입니다.
+ * WebMCP adapter. Binds the use cases to the current WebMCP draft and contains
+ * no business logic of its own.
+ *
+ * Tool inputs are FLAT (`{ from, to, units }`), matching Architecture 10.1/10.2.
+ * An earlier version wrapped them as `{ from, to, opts: {...} }` with
+ * `additionalProperties: false`, so an agent calling the documented contract was
+ * rejected by the schema before anything ran.
  */
 
-import type { RenderOptions } from "../domain/types.ts";
+import type { SpatialRef } from "../domain/types.ts";
 import { usecases } from "../app/usecases.ts";
-import { store } from "../app/store.ts";
-import { assertCapable } from "./capability.ts";
+import type { ToolDefinition } from "./capability.ts";
+import { assertCapable, classifyRegistrationError } from "./capability.ts";
 
-type ToolResult<T> = {
-  ok: boolean;
-  data?: T;
-  hint?: string;
-  error?: { code: string; message: string };
+// ------------------------------------------------------------------ schemas
+
+const REF = { type: "string", minLength: 1, maxLength: 128 } as const;
+
+/** Architecture 6: both are finite and in (0, +inf). `minimum: 0` let zero
+ *  through, and zero produced "about Infinity steps" in the spoken output. */
+const renderProps = {
+  units: { enum: ["meters", "feet", "steps"], description: "Distance unit" },
+  stepLength_m: { type: "number", exclusiveMinimum: 0 },
+  directionStyle: { enum: ["relative", "clock", "cardinal"] },
+  walkSpeedPercent: { type: "number", exclusiveMinimum: 0 },
+} as const;
+
+const object = (properties: Record<string, unknown>, required?: string[]) => ({
+  type: "object",
+  properties,
+  ...(required ? { required } : {}),
+  additionalProperties: false,
+});
+
+// -------------------------------------------------------------------- tools
+
+type Ctx = { signal?: AbortSignal };
+type Tool = {
+  name: string;
+  description: string;
+  inputSchema: unknown;
+  run: (input: Record<string, unknown>, ctx: Ctx) => unknown;
 };
 
-type ToWireResult = ToolResult<unknown>;
+/**
+ * Architecture 16 is an explicit erratum: every call changes visible or log
+ * state, so all nine are `false`. Marking `select`/`undo`/`confirm` read-only
+ * would tell an agent that confirming a booking has no side effects.
+ */
+export const ANNOTATIONS = { readOnlyHint: false, untrustedContentHint: false } as const;
 
-function toWire<T>(result: ToolResult<T>): ToWireResult {
+export const TOOLS: Tool[] = [
+  {
+    name: "a11y.get_layout",
+    description:
+      "Return the overall structure of the current layout: seat and accessibility " +
+      "counts, reference points, and bounds in metres.",
+    inputSchema: object({ ...renderProps }),
+    run: (input) => usecases.getLayout(input),
+  },
+  {
+    name: "a11y.query",
+    description:
+      "Search seats by accessibility need, walking distance from a reference point, " +
+      "price, and direction. Returns at most 12 candidates and a truthful total.",
+    inputSchema: object({
+      near: REF,
+      maxDistance_m: { type: "number", minimum: 0 },
+      priceMax_usd: { type: "number", minimum: 0 },
+      availableOnly: { type: "boolean" },
+      needs: object({
+        wheelchairSpace: { type: "boolean" },
+        transferSeat: { type: "boolean" },
+        movableArmrest: { type: "boolean" },
+        minFootSpace_in2: { type: "number", minimum: 0 },
+        excludeExitRow: { type: "boolean" },
+      }),
+      rail: object({
+        facing: { enum: ["forward", "backward"] },
+        side: { enum: ["window", "aisle"] },
+        quietCar: { type: "boolean" },
+      }),
+      hotel: object({
+        floorMin: { type: "number", minimum: 0 },
+        floorMax: { type: "number", minimum: 0 },
+        bedToBathroomMax_m: { type: "number", minimum: 0 },
+      }),
+      ...renderProps,
+    }),
+    run: (input) => usecases.query(input),
+  },
+  {
+    name: "a11y.describe",
+    description:
+      "Describe one seat or reference point: its attributes, its distance to every " +
+      "reference point, and follow-up questions worth asking.",
+    inputSchema: object({ ref: REF, ...renderProps }, ["ref"]),
+    run: (input) => usecases.describe(input as { ref: SpatialRef }),
+  },
+  {
+    name: "a11y.get_route",
+    description:
+      "Return a structured route between two valid refs, including metre-source " +
+      "segments with bearings, landmarks passed, and the requested rendering.",
+    inputSchema: object({ from: REF, to: REF, ...renderProps }, ["from", "to"]),
+    run: (input) => usecases.getRoute(input as { from: SpatialRef; to: SpatialRef }),
+  },
+  {
+    name: "a11y.compare",
+    description:
+      "Compare 2 to 4 distinct refs on the same named axes, in the order given.",
+    inputSchema: object({
+      refs: { type: "array", items: REF, minItems: 2, maxItems: 4 },
+      ...renderProps,
+    }, ["refs"]),
+    run: (input) => usecases.compare(input as { refs: SpatialRef[] }),
+  },
+  {
+    name: "a11y.get_selection",
+    description: "Report which refs are currently selected and the full selection state.",
+    inputSchema: object({}),
+    run: () => usecases.getSelection(),
+  },
+  {
+    name: "a11y.select",
+    description:
+      "Add one available ref to the selection. This is a draft: nothing is booked " +
+      "until a human confirms it through a11y.confirm.",
+    inputSchema: object({ ref: REF }, ["ref"]),
+    run: (input) => usecases.select(input as { ref: SpatialRef }),
+  },
+  {
+    name: "a11y.undo",
+    description: "Undo the last selection by one step and report which ref that removed.",
+    inputSchema: object({}),
+    run: () => usecases.undo(),
+  },
+  {
+    name: "a11y.confirm",
+    description:
+      "Ask the person to confirm the current selection. Blocks for up to 120 seconds " +
+      "and returns the terminal outcome in the same call. Calling this does not " +
+      "confirm anything by itself.",
+    inputSchema: object({}),
+    run: (_input, ctx) => usecases.confirm({ ...(ctx.signal ? { signal: ctx.signal } : {}) }),
+  },
+];
+
+// --------------------------------------------------------------------- wire
+
+/**
+ * Architecture 15.2: every fulfilled result is a JSON-serializable plain value.
+ * A non-finite number survives TypeScript and then becomes `null` in
+ * `JSON.stringify`, silently deleting the field. These are programming failures,
+ * not expected domain errors, so they throw rather than becoming `ok: false`.
+ */
+export function toWire<T>(result: T): T {
+  const seen = new Set<object>();
+
+  const walk = (v: unknown, path: string): void => {
+    if (v === null) return;
+    switch (typeof v) {
+      case "number":
+        if (!Number.isFinite(v)) throw new TypeError(`${path || "result"} is not a finite number`);
+        return;
+      case "string":
+      case "boolean":
+        return;
+      case "bigint":
+      case "function":
+      case "symbol":
+      case "undefined":
+        throw new TypeError(`${path || "result"} is not JSON-serializable (${typeof v})`);
+    }
+    const o = v as object;
+    // Only an ANCESTOR repeating is a cycle. Two fields sharing one array is
+    // not: JSON.stringify handles that, and get_selection returns the same
+    // `selected` array as both `data.selected` and `state.selected`.
+    if (seen.has(o)) throw new TypeError(`${path || "result"} is circular`);
+    seen.add(o);
+    if (Array.isArray(o)) {
+      o.forEach((item, i) => walk(item, `${path}/${i}`));
+    } else if (
+      Object.getPrototypeOf(o) !== Object.prototype && Object.getPrototypeOf(o) !== null
+    ) {
+      throw new TypeError(`${path || "result"} is not a plain object`);
+    } else {
+      for (const [k, item] of Object.entries(o)) walk(item, `${path}/${k}`);
+    }
+    seen.delete(o);
+  };
+
+  walk(result, "");
   return result;
 }
 
-const renderOptionsSchema = {
-  type: "object",
-  properties: {
-    units: { enum: ["meters", "feet", "steps"], description: "Distance unit" },
-    stepLength_m: { type: "number", minimum: 0 },
-    directionStyle: { enum: ["relative", "clock", "cardinal"] },
-    walkSpeedPercent: { type: "number", minimum: 1, maximum: 200 },
-  },
-  additionalProperties: false,
-};
-
-export function registerAllTools(): void {
-  const ctx = assertCapable();
-
-  // 1. a11y.get_layout
-  ctx.registerTool({
-    name: "a11y.get_layout",
-    description: "Get the overall structure of the car/room: seats, landmarks, accessible features",
-    inputSchema: {
-      type: "object",
-      properties: { opts: renderOptionsSchema },
-      additionalProperties: false,
-    },
-  });
-
-  // 2. a11y.query
-  ctx.registerTool({
-    name: "a11y.query",
-    description: "Search for seats matching accessibility needs, distance, price, direction",
-    inputSchema: {
-      type: "object",
-      properties: {
-        criteria: {
-          type: "object",
-          properties: {
-            near: { type: "string", description: "Landmark key to measure distance from" },
-            maxDistance_m: { type: "number", minimum: 0 },
-            priceMax_usd: { type: "number", minimum: 0 },
-            availableOnly: { type: "boolean", default: true },
-            needs: {
-              type: "object",
-              properties: {
-                wheelchairSpace: { type: "boolean" },
-                transferSeat: { type: "boolean" },
-                movableArmrest: { type: "boolean" },
-                minFootSpace_in2: { type: "number", minimum: 0 },
-                excludeExitRow: { type: "boolean" },
-              },
-              additionalProperties: false,
-            },
-            rail: {
-              type: "object",
-              properties: {
-                facing: { enum: ["forward", "backward"] },
-                side: { enum: ["window", "aisle"] },
-                quietCar: { type: "boolean" },
-              },
-              additionalProperties: false,
-            },
-            hotel: {
-              type: "object",
-              properties: {
-                floorMin: { type: "number", minimum: 1 },
-                floorMax: { type: "number", minimum: 1 },
-                bedToBathroomMax_m: { type: "number", minimum: 0 },
-              },
-              additionalProperties: false,
-            },
-          },
-          additionalProperties: false,
-        },
-        opts: renderOptionsSchema,
-      },
-      required: ["criteria"],
-      additionalProperties: false,
-    },
-  });
-
-  // 3. a11y.describe
-  ctx.registerTool({
-    name: "a11y.describe",
-    description: "Get detailed description of a specific seat or room: location, features, nearby landmarks",
-    inputSchema: {
-      type: "object",
-      properties: {
-        ref: { type: "string", description: "Seat/room reference (e.g. '12A')" },
-        opts: renderOptionsSchema,
-      },
-      required: ["ref"],
-      additionalProperties: false,
-    },
-  });
-
-  // 4. a11y.get_route
-  ctx.registerTool({
-    name: "a11y.get_route",
-    description: "Get walking path from one location to another with distance and turn-by-turn directions",
-    inputSchema: {
-      type: "object",
-      properties: {
-        from: { type: "string", description: "Starting point (seat or landmark)" },
-        to: { type: "string", description: "Destination" },
-        opts: renderOptionsSchema,
-      },
-      required: ["from", "to"],
-      additionalProperties: false,
-    },
-  });
-
-  // 5. a11y.compare
-  ctx.registerTool({
-    name: "a11y.compare",
-    description: "Compare 2-4 seats side-by-side: position, facing, accessibility features, distance from landmarks",
-    inputSchema: {
-      type: "object",
-      properties: {
-        refs: {
-          type: "array",
-          items: { type: "string" },
-          minItems: 2,
-          maxItems: 4,
-          description: "Seat references to compare",
-        },
-        opts: renderOptionsSchema,
-      },
-      required: ["refs"],
-      additionalProperties: false,
-    },
-  });
-
-  // 6. a11y.get_selection
-  ctx.registerTool({
-    name: "a11y.get_selection",
-    description: "Check which seat(s) are currently selected",
-    inputSchema: {
-      type: "object",
-      additionalProperties: false,
-    },
-  });
-
-  // 7. a11y.select
-  ctx.registerTool({
-    name: "a11y.select",
-    description: "Select a seat for booking. Must call confirm() before the selection is final",
-    inputSchema: {
-      type: "object",
-      properties: {
-        ref: { type: "string", description: "Seat reference (e.g. '12A')" },
-      },
-      required: ["ref"],
-      additionalProperties: false,
-    },
-  });
-
-  // 8. a11y.undo
-  ctx.registerTool({
-    name: "a11y.undo",
-    description: "Clear the current selection and go back to browsing",
-    inputSchema: {
-      type: "object",
-      additionalProperties: false,
-    },
-  });
-
-  // 9. a11y.confirm
-  ctx.registerTool({
-    name: "a11y.confirm",
-    description:
-      "Final confirmation for booking. Requires user approval via dialog. " +
-      "Agent cannot proceed without this. Blocks for up to 120 seconds waiting for user click.",
-    inputSchema: {
-      type: "object",
-      additionalProperties: false,
-    },
-  });
+/**
+ * Unknown tool names and thrown exceptions REJECT. Architecture 11 keeps them
+ * out of the fulfilled path: `UNKNOWN_TOOL` and `INTERNAL_ERROR` are not
+ * `ToolErrorCode` members, and dressing a bug as an expected failure hides it.
+ */
+export async function callTool(
+  name: string, input: Record<string, unknown> = {}, ctx: Ctx = {},
+): Promise<unknown> {
+  const tool = TOOLS.find((t) => t.name === name);
+  if (!tool) throw new Error(`Unknown tool: ${name}`);
+  return toWire(await tool.run(input, ctx));
 }
 
-export async function handleToolCall(
-  name: string,
-  input: unknown,
-): Promise<ToWireResult> {
-  const opts = (input as any)?.opts as RenderOptions | undefined;
+// ---------------------------------------------------------------- register
 
-  try {
-    switch (name) {
-      case "a11y.get_layout":
-        return toWire(usecases.getLayout(opts));
+/**
+ * The two signals have different owners and must not be conflated:
+ * `registerTool(definition, { signal })` is the registration lifetime, and
+ * `execute(input, { signal })` is one call's cancellation.
+ */
+export async function registerAllTools(
+  options: { signal?: AbortSignal } = {},
+): Promise<AbortController> {
+  const ctx = assertCapable();
+  const registration = new AbortController();
+  options.signal?.addEventListener("abort", () => registration.abort(), { once: true });
 
-      case "a11y.query": {
-        const criteria = (input as any).criteria;
-        return toWire(usecases.query(criteria, opts));
-      }
-
-      case "a11y.describe":
-        return toWire(usecases.describe({ ref: (input as any).ref }, opts));
-
-      case "a11y.get_route":
-        return toWire(
-          usecases.getRoute(
-            { from: (input as any).from, to: (input as any).to },
-            opts,
-          ),
-        );
-
-      case "a11y.compare":
-        return toWire(usecases.compare({ refs: (input as any).refs }, opts));
-
-      case "a11y.get_selection":
-        return toWire(usecases.getSelection());
-
-      case "a11y.select":
-        return toWire(usecases.select({ ref: (input as any).ref }));
-
-      case "a11y.undo":
-        return toWire(usecases.undo());
-
-      case "a11y.confirm":
-        return toWire(await usecases.confirm());
-
-      default:
-        return { ok: false, error: { code: "UNKNOWN_TOOL", message: `Unknown tool: ${name}` } };
-    }
-  } catch (e) {
-    return {
-      ok: false,
-      error: {
-        code: "INTERNAL_ERROR",
-        message: e instanceof Error ? e.message : "Unknown error",
-      },
+  for (const tool of TOOLS) {
+    const definition: ToolDefinition = {
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      annotations: { ...ANNOTATIONS },
+      execute: async (input, callCtx) =>
+        toWire(await tool.run((input ?? {}) as Record<string, unknown>, callCtx)),
     };
+    try {
+      await ctx.registerTool(definition, { signal: registration.signal });
+    } catch (e) {
+      throw new Error(`WebMCP registration failed for ${tool.name}: ${classifyRegistrationError(e)}`);
+    }
   }
+  return registration;
 }
