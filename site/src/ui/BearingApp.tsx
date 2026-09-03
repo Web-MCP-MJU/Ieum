@@ -306,7 +306,7 @@ export function BearingApp() {
               </div>
               <div className="car-nose rear">REAR · CAFÉ · RESTROOM</div>
             </div>
-            {state.activeRoute && <section className="route-summary" aria-label="Active route"><h3><RouteIcon aria-hidden="true" size={18} />Route to {state.activeRoute.requestedTo}</h3><ol>{state.activeRoute.rendered.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol></section>}
+            {state.activeRoute && <section className="route-summary" aria-label="Active route"><h3><RouteIcon aria-hidden="true" size={18} />Route to {state.activeRoute.requestedTo}</h3><ol>{state.activeRoute.rendered.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><p className="route-total">{state.activeRoute.rendered.summary}</p></section>}
           </section>
 
           <aside className="right-column">

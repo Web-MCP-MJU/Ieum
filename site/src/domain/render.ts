@@ -28,18 +28,36 @@ function concise(value: number, fractionDigits = 1): string {
   return Number(value.toFixed(fractionDigits)).toString();
 }
 
+/**
+ * The number the traveler hears, in whatever units they asked for.
+ *
+ * Totals must be summed over these, never converted once from a meter total:
+ * sum(round(x)) and round(sum(x)) differ, and someone counting the segments
+ * aloud arrives at the first one.
+ */
+export function distanceValue(distance_m: number, options: RenderOptions): number {
+  if (options.units === 'meters') return Number(concise(distance_m));
+  if (options.units === 'feet') return Math.round(distance_m * 3.28084);
+  return Math.round(distance_m / options.stepLength_m);
+}
+
+export function formatDistanceValue(value: number, units: RenderOptions['units']): string {
+  if (units === 'meters') return `${value} meters`;
+  if (units === 'feet') return `${value} feet`;
+  // Read aloud, so "about 1 steps" is worth the conditional.
+  return `about ${value} step${value === 1 ? '' : 's'}`;
+}
+
 export function renderDistance(
   distance_m: number,
   input: RenderInput = {},
 ): { rendered: string; unitsNote?: string } {
   if (!Number.isFinite(distance_m) || distance_m < 0) throw new DomainError('INVALID_CRITERIA');
   const options = normalizeRenderOptions(input);
-  if (options.units === 'meters') return { rendered: `${concise(distance_m)} meters` };
-  if (options.units === 'feet') return { rendered: `${Math.round(distance_m * 3.28084)} feet` };
-  return {
-    rendered: `about ${Math.round(distance_m / options.stepLength_m)} steps`,
-    unitsNote: stepUnitsNote(options.stepLength_m),
-  };
+  const rendered = formatDistanceValue(distanceValue(distance_m, options), options.units);
+  return options.units === 'steps'
+    ? { rendered, unitsNote: stepUnitsNote(options.stepLength_m) }
+    : { rendered };
 }
 
 function quadrant(degrees: number): 0 | 90 | 180 | 270 {
