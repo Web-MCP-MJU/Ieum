@@ -1,0 +1,13 @@
+# Netlify build. Vite emits a static bundle, so there is no runtime to configure.
+#
+# NODE_VERSION matches package.json `engines`. That floor exists because
+# `npm test` runs TypeScript through `node --test` with no build step, which
+# needs Node 23.6+. The build itself does not, but pinning it here keeps the
+# deploy environment from disagreeing with the one the tests were written for.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "24"

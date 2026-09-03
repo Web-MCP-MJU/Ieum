@@ -65,7 +65,9 @@ tests/
 ├─ query.test.ts              조건 조합 + Q1~Q3 에러
 └─ render.test.ts             같은 Route → units 3종
 
-public/smoke.html             WebMCP 스모크 테스트 (체크포인트 1용)
+smoke.html                    WebMCP 스모크 테스트 (체크포인트 1용). public/이 아니라
+                              루트에 둔다 — public/은 변환 없이 그대로 배포에 복사되므로
+                              /src/*.ts import가 프로덕션에서 404가 된다
 ```
 
 ---
@@ -80,7 +82,7 @@ public/smoke.html             WebMCP 스모크 테스트 (체크포인트 1용)
 ### Phase 1 — 9/2 12:00~16:00 · 4시간
 | 작업 | 산출물 |
 | --- | --- |
-| `public/smoke.html` — 툴 1개 등록 + 결과를 화면에 출력 | 스모크 페이지 |
+| `smoke.html` — 툴 1개 등록 + 결과를 화면에 출력 | 스모크 페이지 |
 | Chrome 149 플래그 환경에서 실행 | — |
 | 확인 항목: ① `document.modelContext` 존재 ② `registerTool(def,{signal})` 동작 ③ **점(`.`) 이름 실동작** ④ `execute`가 per-call signal 받는지 ⑤ 반환 shape | 확인 결과 기록 |
 | `domain/types.ts` + `domain/car-6.ts` | 타입 + fixture |
@@ -188,7 +190,7 @@ public/smoke.html             WebMCP 스모크 테스트 (체크포인트 1용)
 - ✅ 브랜치 `feat/webmcp-core`
 - ✅ 스캐폴딩 (`package.json`, `tsconfig.json`, `.gitignore`, 디렉터리)
 - ✅ Node 24가 `.ts` 직접 실행 확인 — 테스트에 빌드 도구 불필요
-- ⬜ **다음: `public/smoke.html` → 체크포인트 1**
+- ⬜ **다음: `smoke.html` → 체크포인트 1**
 
 ## 7. 알려진 환경 이슈
 

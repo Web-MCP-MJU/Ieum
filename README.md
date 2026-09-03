@@ -47,7 +47,8 @@ npm test          # 91/91 ✔
 npm run typecheck # strict mode ✔
 ```
 
-Open `public/smoke.html` in Chrome 149+ or ChatGPT desktop to test tool registration.
+Run `npm run dev` and open `/smoke.html` in Chrome 149+ or the ChatGPT desktop browser.
+It registers the nine real tools and calls them, so it fails if the engine is broken.
 
 ## Design Decisions
 
