@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bearing.example/schemas/rail-fixture-v1.json",
+  "title": "Bearing independently authored rail fixture v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "domain", "layoutId", "authoringSource", "bounds_m",
+    "car", "seats", "landmarks", "referencePoints", "aisleAnchors", "pathEdges"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "bearing.rail-fixture.v1" },
+    "domain": { "const": "rail" },
+    "layoutId": { "$ref": "#/$defs/PublicText" },
+    "authoringSource": { "const": "independently_authored_synthetic" },
+    "bounds_m": { "$ref": "#/$defs/Bounds" },
+    "car": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quietCar"],
+      "properties": { "quietCar": { "type": "boolean" } }
+    },
+    "seats": {
+      "type": "array",
+      "minItems": 60,
+      "maxItems": 60,
+      "items": { "$ref": "#/$defs/FixtureSeat" }
+    },
+    "landmarks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Landmark" }
+    },
+    "referencePoints": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/ReferencePoint" }
+    },
+    "aisleAnchors": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/AisleAnchor" }
+    },
+    "pathEdges": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/FixtureEdge" }
+    }
+  },
+  "$defs": {
+    "RefString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "PublicText": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "Position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0 },
+        "y": { "type": "number", "minimum": 0 }
+      }
+    },
+    "Bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["length", "width"],
+      "properties": {
+        "length": { "type": "number", "exclusiveMinimum": 0 },
+        "width": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "FixtureSeat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref", "row", "seatLetter", "position_m", "side", "facing", "price_usd",
+        "available", "wheelchairSpace", "transferSeat", "companionSeat",
+        "movableArmrest", "footSpace_in2", "bulkhead", "exitRow", "features"
+      ],
+      "properties": {
+        "ref": { "$ref": "#/$defs/RefString" },
+        "row": { "type": "integer", "minimum": 1 },
+        "seatLetter": { "type": "string", "pattern": "^[A-Z]$" },
+        "position_m": { "$ref": "#/$defs/Position" },
+        "side": { "enum": ["window", "aisle"] },
+        "facing": { "enum": ["forward", "backward"] },
+        "price_usd": { "type": "number", "minimum": 0 },
+        "available": { "type": "boolean" },
+        "wheelchairSpace": { "type": "boolean" },
+        "transferSeat": { "type": "boolean" },
+        "companionSeat": { "type": "boolean" },
+        "movableArmrest": { "type": "boolean" },
+        "footSpace_in2": { "type": "number", "minimum": 0 },
+        "bulkhead": { "type": "boolean" },
+        "exitRow": { "type": "boolean" },
+        "features": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/RefString" }
+        }
+      }
+    },
+    "Landmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "label", "position_m", "landmarkType", "sensoryChannels", "detectability"],
+      "properties": {
+        "key": { "$ref": "#/$defs/RefString" },
+        "label": { "$ref": "#/$defs/PublicText" },
+        "position_m": { "$ref": "#/$defs/Position" },
+        "landmarkType": {
+          "enum": ["primary", "secondary", "clue", "information_point", "environmental_regularity"]
+        },
+        "sensoryChannels": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["tactile", "auditory", "olfactory", "thermal", "airflow", "visual"] }
+        },
+        "detectability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["caneUser", "dogGuide"],
+          "properties": {
+            "caneUser": { "enum": ["high", "medium", "low"] },
+            "dogGuide": { "enum": ["high", "medium", "low"] }
+          }
+        },
+        "signpostedAs": { "$ref": "#/$defs/PublicText" }
+      }
+    },
+    "ReferencePoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "label", "position_m", "kind", "stableCheckpoint"],
+      "properties": {
+        "ref": { "$ref": "#/$defs/RefString" },
+        "label": { "$ref": "#/$defs/PublicText" },
+        "position_m": { "$ref": "#/$defs/Position" },
+        "kind": { "enum": ["entrance", "restroom", "service", "connector"] },
+        "stableCheckpoint": { "type": "boolean" }
+      }
+    },
+    "AisleAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "label", "position_m", "row", "stableCheckpoint"],
+      "properties": {
+        "ref": { "$ref": "#/$defs/RefString" },
+        "label": { "$ref": "#/$defs/PublicText" },
+        "position_m": { "$ref": "#/$defs/Position" },
+        "row": { "type": "integer", "minimum": 1 },
+        "stableCheckpoint": { "type": "boolean" }
+      }
+    },
+    "Bearing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "degrees"],
+      "properties": {
+        "frame": { "const": "car_axis" },
+        "degrees": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 }
+      }
+    },
+    "FixtureEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "from", "to", "bidirectional", "traversable", "pathway_mode",
+        "length_m", "bearing"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/RefString" },
+        "from": { "$ref": "#/$defs/RefString" },
+        "to": { "$ref": "#/$defs/RefString" },
+        "bidirectional": { "type": "boolean" },
+        "traversable": { "const": true },
+        "pathway_mode": { "enum": ["walkway", "stairs", "elevator", "door", "vestibule"] },
+        "length_m": { "type": "number", "exclusiveMinimum": 0 },
+        "stair_count": { "type": "integer" },
+        "min_width_m": { "type": "number", "exclusiveMinimum": 0 },
+        "max_slope": { "type": "number" },
+        "signpostedAs": { "$ref": "#/$defs/PublicText" },
+        "bearing": { "$ref": "#/$defs/Bearing" }
+      }
+    }
+  }
+}

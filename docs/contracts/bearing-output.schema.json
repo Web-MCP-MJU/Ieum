@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://bearing.example/schemas/tool-outputs-v0.3.2.json",
-  "title": "Bearing v0.3.2 WebMCP tool output contracts",
+  "$id": "https://bearing.example/schemas/tool-outputs-v0.3.3.json",
+  "title": "Bearing v0.3.3 WebMCP tool output contracts",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -183,10 +183,11 @@
             "ref": true, "label": true, "line": true, "price_usd": true, "available": true, "features": true, "distance": true,
             "domain": { "const": "rail" },
             "rail": {
-              "type": "object", "additionalProperties": false, "required": ["row", "seatLetter", "side", "facing"],
+              "type": "object", "additionalProperties": false, "required": ["row", "seatLetter", "side", "facing", "quietCar"],
               "properties": {
                 "row": { "type": "integer" }, "seatLetter": { "type": "string" },
-                "side": { "enum": ["window", "aisle"] }, "facing": { "enum": ["forward", "backward"] }
+                "side": { "enum": ["window", "aisle"] }, "facing": { "enum": ["forward", "backward"] },
+                "quietCar": { "type": "boolean" }
               }
             },
             "accessibility": {
@@ -215,7 +216,15 @@
               "type": "object", "additionalProperties": false, "required": ["floor"],
               "properties": { "floor": { "type": "integer" }, "bedToBathroom_m": { "type": "number", "minimum": 0 } }
             },
-            "accessibility": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean", "null"] } }
+            "accessibility": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  { "type": "string" }, { "type": "number" },
+                  { "type": "boolean" }, { "type": "null" }
+                ]
+              }
+            }
           }
         }
       ]
@@ -288,7 +297,12 @@
               "ref": { "type": "string" },
               "values": {
                 "type": "object",
-                "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+                "additionalProperties": {
+                  "anyOf": [
+                    { "type": "string" }, { "type": "number" },
+                    { "type": "boolean" }, { "type": "null" }
+                  ]
+                }
               }
             }
           }
@@ -377,7 +391,7 @@
             "state": {
               "allOf": [
                 { "$ref": "#/$defs/SelectionState" },
-                { "properties": { "status": { "const": "confirmed" }, "undoable": { "const": false } } }
+                { "type": "object", "properties": { "status": { "const": "confirmed" }, "undoable": { "const": false } } }
               ]
             }
           }
@@ -393,7 +407,7 @@
             "state": {
               "allOf": [
                 { "$ref": "#/$defs/SelectionState" },
-                { "properties": { "status": { "const": "draft" } } }
+                { "type": "object", "properties": { "status": { "const": "draft" } } }
               ]
             }
           }
