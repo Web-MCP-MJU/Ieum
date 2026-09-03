@@ -8,11 +8,12 @@
 - [x] 비교·환경설정·키보드·capability·query UI 계약을 수정한다.
 - [x] Ieum 사용자 노출 명칭과 E2E 서버 격리를 수정한다.
 - [x] 전체 테스트·타입·린트·빌드·E2E를 검증한다.
-- [ ] 독립 코드 리뷰를 통과시키고 `dev` 대상 PR을 생성한다.
+- [x] 독립 코드 리뷰를 통과시키고 `dev` 대상 PR #11을 생성한다.
 
 ### 런타임 버그 수정 Review
 
-- Node 24.20.0에서 `site/` Vitest 101개와 루트 참조 테스트 94개가 통과했고, typecheck·lint·DESIGN lint(errors 0, warnings 0)·Vinext production build·`git diff --check`가 통과했다.
+- Node 24.20.0에서 `site/` Vitest 104개와 루트 참조 테스트 94개가 통과했고, typecheck·lint·DESIGN lint(errors 0, warnings 0)·Vinext production build·`git diff --check`가 통과했다.
+- 독립 전체 브랜치 리뷰에서 발견된 최신 10개 로그 UI, 명시적 `undefined` preference, StrictMode 재등록 검증 공백을 수정했고 범위 제한 재리뷰에서 병합 가능 판정을 받았다.
 - Playwright production E2E 9개가 통과했다. 760·759·390·320px 새 로드와 동일 페이지 760→759→390→320px 축소 모두에서 통로가 무관한 좌석을 침범하지 않고 목적지·표식 중심 오차가 4px 이하임을 검증했다.
 - Chrome 152 + Chrome DevTools WebMCP에서 아홉 도구(`a11y.get_layout/query/describe/get_route/compare/select/get_selection/undo/confirm`)를 확인하고 `a11y.get_layout {}`가 `Completed`, `ok: true`를 반환했다. 같은 탭 reload 후에도 중복 없이 같은 아홉 도구가 재등록됐다.
 - Chrome DevTools MCP 연결 자체가 post-reload 두 번째 실행 직전에 page target을 잃어(`No page found`) 콘솔 조회와 두 번째 호출은 완료하지 못했다. 앱의 post-reload 도구 목록에는 duplicate-name·registration-failed가 없었고, mock production E2E에서는 9개 등록과 호출을 별도로 통과했다.
