@@ -39,6 +39,8 @@
 - Task 2: 60석/47 available synthetic rail fixture, strict Zod boundary, shared-ref·bounds·edge·reachability·continuation 검증, canonical seat ordering과 immutable shipped export를 구현했다.
 - Task 2 교차 검토: `6-12A → 6-12B` 직접 이동 edge, 60석/필수 ref 회귀 검사, 성공형 exhaustive continuation, bearing/coordinate 일치 검사, adjacency/cache 기반 bootstrap 탐색을 보강했다.
 - 현재 검증: unit/integration 13개, typecheck, lint가 모두 통과한다.
+- 작동형 수직 흐름: query/describe/route/compare/select/selection/undo/confirm과 WebMCP 9개를 동일 Application state에 연결하고, 60석 키보드 그리드·경로 SVG·확인 dialog·활동 로그를 실제 화면에 투영했다.
+- 현재 검증: 전체 71개 테스트, lint, typecheck, production build, DESIGN.md errors 0/warnings 0, 로컬 HTTP 200 및 필수 `dist` 산출물을 확인했다.
 
 ### 설계 교정 Review
 
