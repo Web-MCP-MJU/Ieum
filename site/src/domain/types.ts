@@ -99,3 +99,104 @@ export type LoadedRailFixture = Omit<RailFixture, 'seats'> & {
   seats: Seat[];
   routableRefs: ReadonlySet<string>;
 };
+
+export type RenderInput = Partial<RenderOptions>;
+
+export type QueryCriteria = {
+  near?: string;
+  maxDistance_m?: number;
+  priceMax_usd?: number;
+  availableOnly?: boolean;
+  needs?: {
+    wheelchairSpace?: boolean;
+    transferSeat?: boolean;
+    movableArmrest?: boolean;
+    minFootSpace_in2?: number;
+    excludeExitRow?: boolean;
+  };
+  rail?: {
+    facing?: Seat['facing'];
+    side?: Seat['side'];
+    quietCar?: boolean;
+  };
+  hotel?: {
+    floorMin?: number;
+    floorMax?: number;
+    bedToBathroomMax_m?: number;
+  };
+};
+
+export type QueryInput = QueryCriteria & RenderInput;
+
+export type CandidateBase = {
+  ref: string;
+  label: string;
+  line: string;
+  price_usd: number;
+  available: boolean;
+  features: string[];
+  distance?: { from: string; distance_m: number; rendered: string };
+};
+
+export type RailCandidate = CandidateBase & {
+  domain: 'rail';
+  rail: {
+    row: number;
+    seatLetter: string;
+    side: Seat['side'];
+    facing: Seat['facing'];
+    quietCar: boolean;
+  };
+  accessibility: {
+    wheelchairSpace: boolean;
+    transferSeat: boolean;
+    companionSeat: boolean;
+    movableArmrest: boolean;
+    footSpace_in2: number;
+    bulkhead: boolean;
+    exitRow: boolean;
+  };
+};
+
+export type HotelCandidate = CandidateBase & {
+  domain: 'hotel';
+  hotel: { floor: number; bedToBathroom_m?: number };
+  accessibility: Record<string, string | number | boolean | null>;
+};
+
+export type Candidate = RailCandidate | HotelCandidate;
+
+export type QueryData<TCandidate extends Candidate = Candidate> = {
+  items: TCandidate[];
+  appliedCriteria: QueryCriteria & { availableOnly: boolean };
+  totalMatched: number;
+  unitsNote?: string;
+};
+
+export type QueryComputation<TCandidate extends Candidate = Candidate> = {
+  data: QueryData<TCandidate>;
+  hint?: string;
+};
+
+export type Description = {
+  ref: string;
+  line: string;
+  attributes: Record<string, unknown>;
+  relations: Array<{
+    to: string;
+    distance_m: number;
+    rendered: string;
+    landmarksPassed: string[];
+  }>;
+  followUps: string[];
+  unitsNote?: string;
+};
+
+export type Comparison = {
+  axes: Array<{ key: string; label: string }>;
+  rows: Array<{
+    ref: string;
+    values: Record<string, string | number | boolean | null>;
+  }>;
+  unitsNote?: string;
+};

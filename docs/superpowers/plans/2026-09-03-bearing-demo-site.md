@@ -60,14 +60,14 @@
 - Create: `site/tests/domain/query.test.ts`, `site/tests/domain/describe.test.ts`, `site/tests/domain/compare.test.ts`, `site/tests/domain/render.test.ts`
 
 **Interfaces:**
-- Produces `querySeats(fixture, criteria): QueryData`, `describeRef(fixture, ref, options): Description`, `compareRefs(fixture, refs, options): Comparison`, and pure unit/direction renderers.
+- Produces `querySeats(fixture, criteria): { data: QueryData; hint?: string }`, `describeRef(fixture, ref, options): Description`, `compareRefs(fixture, refs, options): Comparison`, and pure unit/direction renderers; Application places `hint` beside the public `data` envelope.
 - Uses the exact Architecture error codes and 0/12/13+ hint policy.
 
-- [ ] Write failing query tests for defaults, every rail/need filter, stable ordering, zero-result relaxation, 12 results, 13+ truncation/narrowing, both `quietCar` booleans, and unsupported criteria.
-- [ ] Implement minimal deterministic query and rerun focused tests GREEN.
-- [ ] Write failing description/comparison tests for stable refs, invalid refs, unavailable candidates, 1/2/4/5 cardinality, duplicate refs, input order, and identical axes; implement and rerun GREEN.
-- [ ] Write failing render tests for meters/feet/steps, approximation note, direction styles, finite positive guards, and walk-speed scaling; implement and rerun GREEN.
-- [ ] Run the full suite; commit pure read operations.
+- [x] Write failing query tests for defaults, every rail/need filter, stable ordering, zero-result relaxation, 12 results, 13+ truncation/narrowing, both `quietCar` booleans, and unsupported criteria.
+- [x] Implement minimal deterministic query and rerun focused tests GREEN.
+- [x] Write failing description/comparison tests for stable refs, invalid refs, unavailable candidates, 1/2/4/5 cardinality, duplicate refs, input order, and identical axes; implement and rerun GREEN.
+- [x] Write failing render tests for meters/feet/steps, approximation note, direction styles, finite positive guards, and walk-speed scaling; implement and rerun GREEN.
+- [x] Run the full suite; commit pure read operations.
 
 ### Task 4: Implement deterministic route and continuation
 
