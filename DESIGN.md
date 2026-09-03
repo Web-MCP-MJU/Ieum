@@ -1,6 +1,6 @@
 ---
 version: "alpha"
-name: Bearing
+name: Ieum
 description: A precise, high-contrast spatial decision interface for rail-seat exploration by people and browser agents.
 colors:
   primary: "#17324D"
@@ -239,11 +239,11 @@ components:
     size: 3px
 ---
 
-# Bearing Design System
+# Ieum Design System
 
 ## Overview
 
-Bearing should feel like a trustworthy rail information instrument: calm, exact, and immediately operable. It is a working surface for blind and low-vision travelers, keyboard users, sighted companions, judges, and browser agents—not a marketing landing page. Spatial relationships and decision state are the visual hierarchy. The interface is moderately dense on desktop, linear and spacious on mobile, and never ornamental at the expense of comprehension.
+Ieum should feel like a trustworthy rail information instrument: calm, exact, and immediately operable. It is a working surface for blind and low-vision travelers, keyboard users, sighted companions, judges, and browser agents—not a marketing landing page. Spatial relationships and decision state are the visual hierarchy. The interface is moderately dense on desktop, linear and spacious on mobile, and never ornamental at the expense of comprehension.
 
 ## Colors
 
@@ -288,7 +288,7 @@ Depth comes from tonal layers and 1px outlines, not floating card stacks. The wa
 
 ## Shapes
 
-Bearing uses compact 4–8px radii for controls, seat cells, and panels. The seat grid retains rectilinear geometry so it reads as a vehicle layout. Pills are limited to short status labels; content panels and primary buttons are never pill-shaped. Icons are simple stroked symbols from the pinned `lucide-react` package. Informative icon-only controls have explicit accessible names; an icon adjacent to equivalent visible text is decorative and uses `aria-hidden="true"` with no duplicate name. They are bundled with the application; no remote icon service or copied operator asset is used.
+Ieum uses compact 4–8px radii for controls, seat cells, and panels. The seat grid retains rectilinear geometry so it reads as a vehicle layout. Pills are limited to short status labels; content panels and primary buttons are never pill-shaped. Icons are simple stroked symbols from the pinned `lucide-react` package. Informative icon-only controls have explicit accessible names; an icon adjacent to equivalent visible text is decorative and uses `aria-hidden="true"` with no duplicate name. They are bundled with the application; no remote icon service or copied operator asset is used.
 
 ## Components
 
