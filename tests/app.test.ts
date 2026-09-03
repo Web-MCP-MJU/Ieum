@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 
 import { car6 } from "../src/domain/car-6.ts";
 import { createStore, selectionState } from "../src/app/store.ts";
@@ -164,6 +165,27 @@ test("a timeout is a successful outcome, not an error", async () => {
   assert.equal(r.ok, true);
   assert.equal(r.ok === true ? r.data.outcome : "", "timeout");
   assert.equal(stateOf(r).status, "draft");
+});
+
+test("the timeout fires on its own, with nothing else holding the event loop", () => {
+  // node:test keeps the loop alive, so the test above passes even if the timer is
+  // unref'd — and an unref'd timer would make the 120-second contract depend on
+  // whatever else the host happens to be doing. Only a bare process proves it.
+  const script = `
+    import { createStore } from "${import.meta.dirname}/../src/app/store.ts";
+    import { createUsecases } from "${import.meta.dirname}/../src/app/usecases.ts";
+    import { car6 } from "${import.meta.dirname}/../src/domain/car-6.ts";
+    const store = createStore();
+    const use = createUsecases(store, car6, 30);
+    use.select({ ref: "6-12A" });
+    const r = await use.confirm();
+    console.log(JSON.stringify({ outcome: r.data.outcome, status: r.state.status }));
+  `;
+  const out = execFileSync(process.execPath, ["--input-type=module", "-e", script],
+    { encoding: "utf8", timeout: 15_000 });
+
+  assert.deepEqual(JSON.parse(out.trim()), { outcome: "timeout", status: "draft" },
+    "a confirm left alone must still time out");
 });
 
 test("cancelling a confirmation does not consume the user's undo history", async () => {

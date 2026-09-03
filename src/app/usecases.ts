@@ -345,9 +345,11 @@ export function createUsecases(
         else if (s.confirmationStatus === "draft") terminal("cancelled");
       });
 
+      // Deliberately not unref'd. An unref'd timer only fires while something else
+      // keeps the loop alive, which would make the 120-second contract depend on
+      // what else the host happens to be doing. The caller awaits this promise,
+      // so the pending timer is exactly as long-lived as the call itself.
       timer = setTimeout(() => terminal("timeout"), confirmTimeoutMs);
-      // Node keeps the process alive for a pending timer; a browser does not care.
-      (timer as unknown as { unref?: () => void }).unref?.();
     });
   };
 
