@@ -200,3 +200,37 @@ export type Comparison = {
   }>;
   unitsNote?: string;
 };
+
+export type RouteSegment = {
+  pathway_mode: FixtureEdge['pathway_mode'];
+  from: string;
+  to: string;
+  length_m: number;
+  traversal_time_s: number;
+  stair_count?: number;
+  min_width_m?: number;
+  max_slope?: number;
+  signpostedAs?: string;
+  bearing: { frame: 'egocentric' | 'car_axis'; degrees: number };
+  countedFeatures?: { feature: string; count: number };
+  landmarksPassed: string[];
+};
+
+export type Route = {
+  from: string;
+  requestedTo: string;
+  to: string;
+  totalLength_m: number;
+  totalTraversalTime_s: number;
+  segments: RouteSegment[];
+  landmarks: Landmark[];
+  requiresContinuation: boolean;
+  checkpoint?: { ref: string; label: string };
+  rendered: {
+    units: Units;
+    directionStyle: DirectionStyle;
+    instructions: string[];
+    summary: string;
+    unitsNote?: string;
+  };
+};

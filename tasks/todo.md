@@ -27,7 +27,7 @@
 - [x] Task 1: pinned Sites scaffold와 검증 harness를 구성한다.
 - [x] Task 2: canonical rail fixture와 교차 필드 validator를 구현한다.
 - [x] Task 3: query/describe/compare/render 순수 도메인을 구현한다.
-- [ ] Task 4: route/continuation 엔진을 구현한다.
+- [x] Task 4: route/continuation 엔진을 구현한다.
 - [ ] Task 5: Application state, undo, confirmation lifecycle을 구현한다.
 - [ ] Task 6: atomic WebMCP 9-tool adapter를 구현한다.
 - [ ] Task 7: 전체 접근 가능 working surface를 구현한다.

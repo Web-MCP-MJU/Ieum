@@ -79,10 +79,10 @@
 - Produces `getRoute(fixture, from, to, options): Route` and a deterministic graph path ordered by cost then ref.
 - Returns at most four merged segments, partial-leg totals, and a strictly progressing checkpoint when continuation is required.
 
-- [ ] Write failing tests for all eight Architecture route cases, cross-aisle lateral movement, reverse `+180°`, no unidirectional reverse, segment merge, totals, rendered-only changes, and call-specific walking time.
-- [ ] Write failing exhaustive ordered-pair tests proving each continuation leg has 1–4 segments, decreases remaining path length, never repeats a checkpoint, and terminates.
-- [ ] Implement deterministic graph traversal, segment construction/merge, continuation selection, totals, and rendering; verify focused tests GREEN.
-- [ ] Run the full suite; commit route behavior.
+- [x] Write failing tests for all eight Architecture route cases, cross-aisle lateral movement, reverse `+180°`, no unidirectional reverse, segment merge, totals, rendered-only changes, and call-specific walking time.
+- [x] Write failing exhaustive ordered-pair tests proving each continuation leg has 1–4 segments, decreases remaining path length, never repeats a checkpoint, and terminates.
+- [x] Implement deterministic graph traversal, segment construction/merge, continuation selection, totals, and rendering; verify focused tests GREEN.
+- [x] Run the full suite; commit route behavior.
 
 ### Task 5: Implement shared Application state and confirmation
 
