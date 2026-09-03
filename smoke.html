@@ -1,0 +1,155 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Ieum — WebMCP engine validation</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 900px; margin: 1.5rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+  .subtitle { color: #666; margin-bottom: 2rem; }
+  #out { background: #f9f9f9; border: 1px solid #ddd; padding: 1.5rem; border-radius: 8px; }
+  .log-item { margin-bottom: 0.6rem; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  .ok { color: #0a7c2f; } .bad { color: #c0271d; } .info { color: #0969da; }
+  .mark { font-weight: 700; }
+  .detail { color: #666; font-size: 12px; }
+  .section { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; font-weight: 700; }
+</style>
+
+<h1>Ieum — WebMCP engine validation</h1>
+<p class="subtitle">
+  Registers the nine real <code>a11y.*</code> tools and calls them. Serve with
+  <code>npm run dev</code> in Chrome 149+ with
+  <code>chrome://flags/#enable-webmcp-testing</code>, or the ChatGPT desktop browser.
+</p>
+<div id="out" role="log" aria-live="polite"></div>
+
+<script type="module">
+// Architecture 16 forbids interpolating strings into innerHTML. Every value
+// below reaches the page as a text node, including navigator.userAgent.
+const out = document.getElementById('out');
+
+const put = (label, verdict, detail = '') => {
+  const cls = verdict === true ? 'ok' : verdict === false ? 'bad' : 'info';
+  const mark = verdict === true ? 'PASS' : verdict === false ? 'FAIL' : 'INFO';
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  const badge = document.createElement('span');
+  badge.className = `mark ${cls}`;
+  badge.textContent = `[${mark}]`;
+  item.append(badge, document.createTextNode(` ${label}`));
+  if (detail) {
+    const d = document.createElement('span');
+    d.className = 'detail';
+    d.textContent = ` — ${detail}`;
+    item.append(d);
+  }
+  out.append(item);
+  return verdict;
+};
+
+const section = (title) => {
+  const el = document.createElement('div');
+  el.className = 'section';
+  el.textContent = title;
+  out.append(el);
+};
+
+const fail = (label, e) => put(label, false, e instanceof Error ? e.message : String(e));
+
+// ─── 1. Environment ───
+section('1. Environment');
+put('Browser', null, navigator.userAgent);
+const chromeVer = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1];
+if (/Edg\//.test(navigator.userAgent)) put('Chrome 149+', false, 'Edge detected. Use Chrome.');
+else if (!chromeVer) put('Chrome 149+', null, 'Not Chrome — fine for the ChatGPT desktop browser.');
+else put('Chrome 149+', Number(chromeVer) >= 149, `Chrome ${chromeVer}`);
+put('Secure context', window.isSecureContext, `isSecureContext=${window.isSecureContext}`);
+
+// ─── 2. WebMCP API ───
+section('2. WebMCP API');
+const { detectCapability } = await import('/src/webmcp/capability.ts');
+const capability = detectCapability();
+put('document.modelContext', capability === 'available', capability === 'available'
+  ? 'available'
+  : `${capability} — enable chrome://flags/#enable-webmcp-testing`);
+
+// ─── 3. Registration ───
+section('3. Tool registration (the real adapter, not stubs)');
+const { TOOLS, registerAllTools, callTool } = await import('/src/webmcp/register.ts');
+
+if (capability === 'available') {
+  try {
+    await registerAllTools();
+    const names = document.modelContext.getTools().map((t) => t.name);
+    put('Nine tools registered', names.length === 9, names.join(', '));
+    // Architecture 16: readOnlyHint true on select/undo/confirm would tell an
+    // agent that confirming a booking has no side effects.
+    const hints = document.modelContext.getTools().every((t) => t.annotations?.readOnlyHint === false);
+    put('All annotations declare side effects', hints, 'readOnlyHint: false on all nine');
+    const executable = document.modelContext.getTools().every((t) => typeof t.execute === 'function');
+    put('Every tool has execute', executable);
+  } catch (e) { fail('registerAllTools', e); }
+} else {
+  put('Registration skipped', null, 'No WebMCP host. The engine checks below still run.');
+  put('Nine tools defined', TOOLS.length === 9, TOOLS.map((t) => t.name).join(', '));
+}
+
+// ─── 4. The engine actually answers ───
+// These must FAIL if the engine is broken. Registering stubs proved nothing.
+section('4. Engine behaviour');
+
+try {
+  const r = await callTool('a11y.get_route', { from: 'entrance_front', to: '6-12A' });
+  const segs = r.data.segments;
+  put('get_route returns segments', segs.length > 0, `${segs.length} segments, ${r.data.totalLength_m} m`);
+  put('every segment carries a bearing',
+    segs.every((s) => s.bearing && s.bearing.degrees >= 0 && s.bearing.degrees < 360),
+    segs.map((s) => `${s.bearing.frame}:${s.bearing.degrees}`).join(' '));
+
+  // The spoken total must equal the sum of the spoken segments.
+  const spoken = [...r.data.rendered.summary.matchAll(/([\d.]+) ft\b/g)].map((m) => Number(m[1]));
+  const total = spoken.pop();
+  put('spoken total equals the spoken segments',
+    total === spoken.reduce((a, b) => a + b, 0), r.data.rendered.summary);
+} catch (e) { fail('a11y.get_route', e); }
+
+try {
+  const r = await callTool('a11y.get_route', { from: '6-12A', to: '6-12D' });
+  put('across the aisle is not zero distance', r.data.totalLength_m > 0,
+    `${r.data.totalLength_m} m in ${r.data.segments.length} segments`);
+} catch (e) { fail('cross-aisle route', e); }
+
+try {
+  const layout = await callTool('a11y.get_layout', {});
+  put('get_layout counts the fixture', layout.data.seatCount.total === 60,
+    `${layout.data.seatCount.total} seats, ${layout.data.seatCount.available} available`);
+
+  const taken = await callTool('a11y.select', { ref: '6-1A' });
+  put('select refuses a seat already taken',
+    taken.ok === false && taken.error.code === 'NOT_AVAILABLE',
+    `${taken.ok === false ? taken.error.code : 'unexpectedly ok'}`);
+  put('a failed select still reports full state', Boolean(taken.state),
+    JSON.stringify(taken.state));
+
+  const good = await callTool('a11y.select', { ref: '6-12A' });
+  put('select succeeds on a free seat', good.ok === true, JSON.stringify(good.state));
+
+  const undone = await callTool('a11y.undo', {});
+  put('undo names the ref it removed', undone.ok === true && undone.data.undone === '6-12A',
+    JSON.stringify(undone.data));
+} catch (e) { fail('selection flow', e); }
+
+try {
+  const q = await callTool('a11y.query', { rail: { side: 'window' }, near: 'entrance_front' });
+  put('query returns structured candidates',
+    q.data.items.every((i) => i.domain === 'rail' && typeof i.available === 'boolean'),
+    `${q.data.items.length} of ${q.data.totalMatched} matched`);
+  put('query reports the defaults it applied',
+    q.data.appliedCriteria.availableOnly === true, JSON.stringify(q.data.appliedCriteria));
+} catch (e) { fail('a11y.query', e); }
+
+try {
+  await callTool('a11y.nope', {});
+  put('an unknown tool rejects', false, 'it resolved instead');
+} catch { put('an unknown tool rejects', true, 'not dressed up as ok:false'); }
+
+section('Done');
+</script>
