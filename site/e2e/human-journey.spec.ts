@@ -76,6 +76,8 @@ async function readRouteGeometry(page: Page) {
     const targetRect = target.getBoundingClientRect();
     const marker = document.querySelector<SVGCircleElement>('.route-endpoint-marker');
     const markerOverlay = marker?.closest<SVGSVGElement>('svg');
+    const routeOverlay = document.querySelector<SVGSVGElement>('.route-overlay');
+    const stage = document.querySelector<HTMLElement>('.car-stage');
     const seatGrid = document.querySelector<HTMLElement>('.seat-grid');
     const markerPoint = marker
       ? toViewportPoint(marker, marker.cx.baseVal.value, marker.cy.baseVal.value)
@@ -86,6 +88,8 @@ async function readRouteGeometry(page: Page) {
     return {
       lines,
       seats,
+      viewBoxWidth: routeOverlay?.viewBox.baseVal.width ?? 0,
+      stageWidth: stage?.clientWidth ?? 0,
       targetCenter: {
         x: targetRect.left + targetRect.width / 2,
         y: targetRect.top + targetRect.height / 2,
@@ -102,6 +106,36 @@ async function readRouteGeometry(page: Page) {
         : null,
     };
   });
+}
+
+async function readResponsiveRouteMetrics(page: Page) {
+  const geometry = await readRouteGeometry(page);
+  const aisleSegments = geometry.lines.filter(
+    (line) => Math.abs(line.y2 - line.y1) > Math.abs(line.x2 - line.x1),
+  );
+  const aisleIntersections = aisleSegments.flatMap((line) => geometry.seats
+    .filter((seat) => intersectsRect(line, seat))
+    .map((seat) => seat.ref));
+  const finalLine = geometry.lines.at(-1);
+  const endpointError = finalLine
+    ? Math.hypot(
+        finalLine.x2 - geometry.targetCenter.x,
+        finalLine.y2 - geometry.targetCenter.y,
+      )
+    : Number.POSITIVE_INFINITY;
+  const markerError = geometry.marker
+    ? Math.hypot(
+        geometry.marker.x - geometry.targetCenter.x,
+        geometry.marker.y - geometry.targetCenter.y,
+      )
+    : Number.POSITIVE_INFINITY;
+  return {
+    aisleIntersections,
+    endpointError,
+    markerError,
+    viewBoxWidth: geometry.viewBoxWidth,
+    stageWidth: geometry.stageWidth,
+  };
 }
 
 for (const width of [760, 759, 390, 320]) {
@@ -161,6 +195,46 @@ for (const width of [760, 759, 390, 320]) {
     }
   });
 }
+
+test('responsive route reprojects after same-page viewport changes', async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 900 });
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Show route' }).click();
+  await expect.poll(() => page.locator('.route-overlay line').count()).toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Select seat 12A' }).click();
+
+  const observedViewBoxWidths: number[] = [];
+  for (const width of [760, 759, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(async () => {
+      const metrics = await readResponsiveRouteMetrics(page);
+      return {
+        aisleIntersections: metrics.aisleIntersections,
+        endpointAligned: metrics.endpointError <= 4,
+        markerAligned: metrics.markerError <= 4,
+        projectionMatchesStage: Math.abs(metrics.viewBoxWidth - metrics.stageWidth) <= 0.5,
+      };
+    }, { message: `${width}px route should reproject after an in-page resize` }).toEqual({
+      aisleIntersections: [],
+      endpointAligned: true,
+      markerAligned: true,
+      projectionMatchesStage: true,
+    });
+    await expect(page.locator('.route-endpoint-marker')).toBeVisible();
+
+    const metrics = await readResponsiveRouteMetrics(page);
+    expect.soft(metrics.aisleIntersections, `${width}px resized aisle should avoid seats`).toEqual([]);
+    expect.soft(metrics.endpointError, `${width}px resized endpoint should reach the target centre`)
+      .toBeLessThanOrEqual(4);
+    expect.soft(metrics.markerError, `${width}px resized marker should remain centred`)
+      .toBeLessThanOrEqual(4);
+    expect.soft(Math.abs(metrics.viewBoxWidth - metrics.stageWidth), `${width}px viewBox should track the stage`)
+      .toBeLessThanOrEqual(0.5);
+    observedViewBoxWidths.push(metrics.viewBoxWidth);
+  }
+
+  expect(new Set(observedViewBoxWidths.map(Math.round)).size).toBeGreaterThanOrEqual(3);
+});
 
 test('human can inspect, select, cancel confirmation, and keep editing', async ({ page }) => {
   const browserErrors: string[] = [];
