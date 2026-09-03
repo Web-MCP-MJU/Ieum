@@ -24,7 +24,7 @@ WCAG 2.2 requires semantic connections between table cells, not spatial relation
 - **14 CFR 382.41** requires per-seat accessibility data
 - **No standard schema** exists. Everything is free text, unparseable.
 
-Ieum demonstrates a structured alternative using a **15-seat unbranded rail car** model.
+Ieum demonstrates a structured alternative using an unbranded rail car model: **15 rows of 4 seats, 60 in all**.
 
 ## How It Works
 
@@ -43,7 +43,7 @@ External Browser Agent (ChatGPT, Claude, etc.)
 Run locally:
 ```bash
 npm install
-npm test          # 27/27 ✔
+npm test          # 91/91 ✔
 npm run typecheck # strict mode ✔
 ```
 
@@ -87,20 +87,30 @@ Use existing transit standard vocabulary (length_m, traversal_time_s, pathway_mo
 
 ```
 src/
-├─ domain/          Pure TypeScript (27/27 tests ✔)
-│  ├─ types.ts
-│  ├─ car-6.ts      15-seat unbranded fixture
+├─ data/
+│  └─ intercity-car-6.json   Authored spatial truth: 60 seats, landmarks, portals
+├─ domain/          Pure TypeScript, knows nothing about the DOM
+│  ├─ types.ts      The TypeScript face of the output contract
+│  ├─ car-6.ts      Loads and validates the fixture
 │  ├─ route-engine.ts
 │  ├─ query-engine.ts
 │  ├─ compare-engine.ts
-│  └─ render.ts
+│  └─ render.ts     Metres and degrees in, spoken instructions out
 ├─ app/
-│  ├─ store.ts      AppState + subscribe
-│  └─ usecases.ts   9 use cases + ToolResult
+│  ├─ store.ts      AppState, undo history, SelectionState selectors
+│  └─ usecases.ts   9 use cases, one per tool
 ├─ webmcp/
-│  ├─ capability.ts Document.modelContext detection
-│  └─ register.ts   registerTool × 9
+│  ├─ capability.ts document.modelContext detection and diagnostics
+│  └─ register.ts   registerTool x 9, wired to the use cases
 └─ ui/              (In progress)
+
+tests/
+├─ schema.ts        Validates output against docs/contracts/ieum-output.schema.json
+├─ contract.test.ts Schema conformance + the validator's own self-check
+├─ route.test.ts    Architecture section 7 acceptance cases
+├─ query.test.ts
+├─ app.test.ts      State, undo, and the confirmation boundary
+└─ webmcp.test.ts   Registration, annotations, serialization
 
 docs/
 ├─ PRD v0.3.md       Requirements & research
