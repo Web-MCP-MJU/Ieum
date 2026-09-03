@@ -1169,7 +1169,7 @@ These are engineering tests, not participant research. Direct blind-user validat
 
 - Use Node 24 LTS, npm 11, `create-sites@0.3.0`, exact direct-dependency versions, and a committed npm lockfile.
 - From `site/`, run `npm ci`, then `npm run design:lint`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e`, and `npm run build`.
-- Require `site/dist/server/index.js`, `site/dist/assets/`, and `site/dist/.openai/hosting.json`; the staged hosting manifest must byte-match the reviewed `site/.openai/hosting.json`.
+- Require `site/dist/server/index.js`, Vinext's emitted `site/dist/client/_next/static/` asset tree, and `site/dist/.openai/hosting.json`; the staged hosting manifest must byte-match the reviewed `site/.openai/hosting.json`.
 - Verify the deployed top-level HTTPS response sends `Permissions-Policy: tools=(self)`, `Origin-Agent-Cluster: ?1`, a CSP without `unsafe-inline` or `unsafe-eval`, and `X-Content-Type-Options: nosniff`.
 - Record commit SHA, URL, UTC timestamp, runtime versions, headers, request inventory, discovered tools, call lifecycle/outcomes, and evidence paths in `docs/evidence/demo-runtime.json`.
 

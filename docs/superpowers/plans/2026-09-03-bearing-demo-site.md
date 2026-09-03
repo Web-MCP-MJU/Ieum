@@ -33,10 +33,10 @@
 - Produces scripts `design:lint`, `lint`, `typecheck`, `test`, `test:e2e`, and `build`.
 - Produces the `@/*` source alias and jsdom test environment used by all later tasks.
 
-- [ ] Generate the Site once with the pinned CLI and shadcn add-on; inspect its package scripts, UI exports, and hosting manifest before editing.
-- [ ] Add a failing smoke test that imports the page and expects the accessible name `Bearing rail workspace`; verify RED because starter content has no such region.
-- [ ] Replace only starter metadata/theme shell needed for the named empty working surface, add exact verification scripts and test configuration, then verify the focused smoke test is GREEN.
-- [ ] Run `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`; commit the scaffold and harness.
+- [x] Generate the Site once with the pinned CLI and shadcn add-on; inspect its package scripts, UI exports, and hosting manifest before editing.
+- [x] Add a failing smoke test that imports the page and expects the accessible name `Bearing rail workspace`; verify RED because starter content has no such region.
+- [x] Replace only starter metadata/theme shell needed for the named empty working surface, add exact verification scripts and test configuration, then verify the focused smoke test is GREEN.
+- [x] Run `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`; commit the scaffold and harness.
 
 ### Task 2: Implement the canonical rail fixture boundary
 
@@ -149,4 +149,3 @@
 - [ ] Run `npm ci`, design lint, lint, typecheck, unit/integration tests, E2E, and build from `site/`; verify the three required `dist` artifacts.
 - [ ] Perform Chrome and ChatGPT in-app browser runtime calls when available and record only observed evidence; leave unavailable checks explicitly pending rather than fabricating success.
 - [ ] Commit evidence and release assets, request whole-branch code review, fix validated findings, rerun the complete verification gate, then proceed to Sites hosting.
-

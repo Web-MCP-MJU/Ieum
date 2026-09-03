@@ -143,7 +143,7 @@ Every walkthrough records commit SHA, deployed URL, UTC timestamp, browser/runti
 
 ## 10. Deployment and demo acceptance
 
-Implementation lives in `site/` and uses Node 24 LTS, npm 11, a committed lockfile, pinned direct dependency versions, and `create-sites@0.3.0`. `site/package.json` provides `design:lint`, `lint`, `typecheck`, `test`, `test:e2e`, and `build`. Clean verification is `npm ci` followed by those six scripts. The Vinext build must emit `site/dist/server/index.js`, `site/dist/assets/`, and a staged `site/dist/.openai/hosting.json` copied from the reviewed `site/.openai/hosting.json`; missing output fails the build.
+Implementation lives in `site/` and uses Node 24 LTS, npm 11, a committed lockfile, pinned direct dependency versions, and `create-sites@0.3.0`. `site/package.json` provides `design:lint`, `lint`, `typecheck`, `test`, `test:e2e`, and `build`. Clean verification is `npm ci` followed by those six scripts. The Vinext build must emit `site/dist/server/index.js`, the `site/dist/client/_next/static/` asset tree, and a staged `site/dist/.openai/hosting.json` copied from the reviewed `site/.openai/hosting.json`; missing output fails the build.
 
 The public response is HTTPS, top-level, same-origin and sends at least `Permissions-Policy: tools=(self)`, `Origin-Agent-Cluster: ?1`, a CSP without `unsafe-inline`/`unsafe-eval`, and `X-Content-Type-Options: nosniff`. The only runtime network requests are the initial document and bundled same-origin assets. `public/og.png` is an original Bearing preview with explicit English title/description metadata and no operator branding.
 

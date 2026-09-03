@@ -1,0 +1,159 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+:root {
+  --background: #f7f5ef;
+  --foreground: #17212b;
+  --card: #ffffff;
+  --card-foreground: #17212b;
+  --popover: #ffffff;
+  --popover-foreground: #17212b;
+  --primary: #005a78;
+  --primary-foreground: #ffffff;
+  --secondary: #e9eef2;
+  --secondary-foreground: #17212b;
+  --muted: #e9eef2;
+  --muted-foreground: #52606d;
+  --accent: #cfe8f3;
+  --accent-foreground: #17212b;
+  --destructive: #a12c2c;
+  --border: #637381;
+  --input: #637381;
+  --ring: #5b21b6;
+  --radius: 0.5rem;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--background);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.site-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1440px;
+  margin: 0 auto 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header h1,
+.panel h2,
+.site-header p,
+.panel p {
+  margin: 0;
+}
+
+.site-header h1 {
+  color: #17324d;
+  font-size: clamp(2rem, 4vw, 2.25rem);
+  line-height: 1.1;
+}
+
+.eyebrow,
+.prototype-label {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.workspace-shell {
+  display: grid;
+  grid-template-columns: 300px minmax(480px, 1fr) 340px;
+  gap: 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.panel {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.panel h2 {
+  margin-bottom: 8px;
+  color: #17324d;
+  font-size: 1.375rem;
+}
+
+.panel p + h2,
+.panel h2 + p {
+  margin-top: 8px;
+}
+
+@media (max-width: 1215px) {
+  .workspace-shell {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .workspace-shell > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 759px) {
+  .app-shell {
+    padding: 16px;
+  }
+
+  .site-header {
+    align-items: start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .workspace-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-shell > :last-child {
+    grid-column: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --background: Canvas;
+    --foreground: CanvasText;
+    --card: Canvas;
+    --card-foreground: CanvasText;
+    --border: CanvasText;
+    --ring: Highlight;
+  }
+}
