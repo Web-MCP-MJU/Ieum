@@ -163,4 +163,4 @@ MIT. See [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-Research supervision by accessibility specialists at Smith-Kettlewell Eye Research Institute. Built for the MJU WebMCP competition.
+Built for the MJU WebMCP competition.
